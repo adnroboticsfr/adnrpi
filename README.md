@@ -1,6 +1,6 @@
 # adnrpi
 
-Custom Armbian image builder for the ADNRPi One (Allwinner H3) by **ADN Robotics**.
+Custom Armbian image builder for the **SmartPi One** (Allwinner H3) by **ADN Robotics**.
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![GitHub Issues](https://img.shields.io/github/issues/adnroboticsfr/adnrpi)](https://github.com/adnroboticsfr/adnrpi/issues)
@@ -22,18 +22,18 @@ Custom Armbian image builder for the ADNRPi One (Allwinner H3) by **ADN Robotics
 
 ## What is this?
 
-`adnrpi` builds ready-to-flash Armbian images for the **ADNRPi One** and **ADNRPi Pad** boards. It wraps the official Armbian build system with board-specific patches, kernel overlays, and automation scripts so you get a working image without manual configuration.
+`adnrpi` builds ready-to-flash Armbian images for the **SmartPi One** and **SmartPi Pad** (Allwinner H3) boards. It wraps the official Armbian build system with board-specific patches, kernel overlays, and automation scripts so you get a working image without manual configuration.
 
 ---
 
 ## Supported hardware
 
-| Board | SoC | RAM |
-|-------|-----|-----|
-| ADNRPi One | Allwinner H3 quad-core | 1 GB |
-| ADNRPi Pad | Allwinner H3 quad-core | 1 GB + 4.3" touchscreen |
+| Board       | SoC                    | RAM                     |
+|-------------|------------------------|-------------------------|
+| SmartPi One | Allwinner H3 quad-core | 1 GB                    |
+| SmartPi Pad | Allwinner H3 quad-core | 1 GB + 4.3" touchscreen |
 
-The ADNRPi Pad uses the same `adnrpi1` images — the 800×480 screen and 180° rotation are detected and applied automatically at boot.
+The SmartPi Pad uses the same `adnrpi1` images — the 800×480 screen and 180° rotation are detected and applied automatically at boot.
 
 ---
 

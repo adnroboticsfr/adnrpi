@@ -1,66 +1,66 @@
-# Démarrage rapide
+# Getting Started
 
-## 1. Télécharger une image
+## 1. Download an image
 
-Va sur [Releases](https://github.com/adnroboticsfr/adnrpi/releases) et télécharge l'image qui correspond à ton usage :
+Go to [Releases](https://github.com/adnroboticsfr/adnrpi/releases) and pick the image that fits your use case:
 
-| Image | Usage |
-|-------|-------|
-| `ADNRPi-adnrpi1-trixie-debian13-server` | Serveur léger, usage général |
-| `ADNRPi-adnrpi1-noble-ubuntu24.04-server` | Ubuntu LTS serveur |
-| `ADNRPi-adnrpi1-trixie-debian13-desktop_XFCE` | Bureau XFCE |
+| Image | Use case |
+|-------|----------|
+| `ADNRPi-adnrpi1-trixie-debian13-server` | Lightweight server, general purpose |
+| `ADNRPi-adnrpi1-noble-ubuntu24.04-server` | Ubuntu LTS server |
+| `ADNRPi-adnrpi1-trixie-debian13-desktop_XFCE` | XFCE desktop |
 | `ADNRPi-adnrpi1-jammy-ubuntu22.04-ros2-server` | **ROS2 Humble** |
 | `ADNRPi-adnrpi1-jammy-ubuntu22.04-ros1-server` | **ROS1 Noetic** |
 
-## 2. Flasher la carte SD
+## 2. Flash the SD card
 
-**Avec Balena Etcher (recommandé) :**
-1. Télécharge [Balena Etcher](https://etcher.balena.io)
-2. Sélectionne le fichier `.img.xz`
-3. Sélectionne ta carte SD
+**With Balena Etcher (recommended):**
+1. Download [Balena Etcher](https://etcher.balena.io)
+2. Select the `.img.xz` file
+3. Select your SD card
 4. Flash
 
-**Avec dd (Linux/macOS) :**
+**With dd (Linux/macOS):**
 ```bash
 xz -dc ADNRPi-adnrpi1-trixie-debian13-server-*.img.xz | sudo dd of=/dev/sdX bs=4M status=progress
 sync
 ```
 
-## 3. Configurer avant le premier démarrage (optionnel)
+## 3. Configure before first boot (optional)
 
-Avant d'insérer la carte, ouvre la partition FAT (`/boot`) et édite `adnrpi-config.txt` :
+Before inserting the SD card, open the FAT partition and edit `adnrpi-config.txt`:
 
 ```ini
 APPLY_CONFIG=1
-HOSTNAME=mon-robot
-WIFI_SSID=MonReseau
-WIFI_PASSWORD=monmotdepasse
+HOSTNAME=my-robot
+WIFI_SSID=MyNetwork
+WIFI_PASSWORD=mypassword
 WIFI_COUNTRY=FR
 SSH_ENABLED=1
 TIMEZONE=Europe/Paris
 ```
 
-Pour les images ROS, ajoute également les paramètres ROS — voir [Configuration ROS](ros-configuration.md).
+For ROS images, also add ROS parameters — see [ROS Configuration](ros-configuration.md).
 
-## 4. Premier démarrage
+## 4. First boot
 
-1. Insère la carte SD dans l'ADNRPi One
-2. Branche l'alimentation
-3. Le logo ADN Robotics s'affiche immédiatement (U-Boot)
-4. Le système démarre, la configuration est appliquée automatiquement
+1. Insert the SD card into the ADNRPi One
+2. Plug in power
+3. The ADN Robotics logo appears immediately (U-Boot, before SD card is read)
+4. The system boots and applies the configuration automatically
 
-**Connexion SSH (réseau) :**
+**SSH over the network:**
 ```bash
-ssh root@<ip-du-board>
+ssh root@<board-ip>
 ```
 
-**Connexion SSH via USB OTG** (voir [SSH via USB](ssh-usb.md)) :
+**SSH over USB OTG** (see [SSH over USB](ssh-usb.md)):
 ```bash
 ssh root@172.22.1.1
 ```
 
-## 5. Mot de passe par défaut
+## 5. Default credentials
 
-| Utilisateur | Mot de passe |
-|-------------|--------------|
-| `root` | `1234` (à changer au premier login) |
+| User | Password |
+|------|----------|
+| `root` | `1234` (prompted to change on first login) |

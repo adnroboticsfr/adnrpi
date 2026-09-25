@@ -1,23 +1,23 @@
-# Configuration ROS
+# ROS Configuration
 
-Les images ROS d'ADNRPi incluent `adnrpi-ros-config`, un outil en ligne de commande pour configurer l'environnement ROS à tout moment.
+ADNRPi ROS images include `adnrpi-ros-config`, a command-line tool to configure the ROS environment at any time — at first boot or later.
 
-## Images disponibles
+## Available images
 
-| Image | ROS | Base |
-|-------|-----|------|
+| Image | ROS | Base OS |
+|-------|-----|---------|
 | `*-jammy-ubuntu22.04-ros2-server` | ROS2 Humble | Ubuntu 22.04 |
 | `*-jammy-ubuntu22.04-ros1-server` | ROS1 Noetic | Ubuntu 22.04 |
 
-## Configuration au premier démarrage
+## Configure at first boot
 
-Édite `adnrpi-config.txt` sur la partition SD avant de démarrer :
+Edit `adnrpi-config.txt` on the SD card before booting:
 
 ```ini
 APPLY_CONFIG=1
 
-# Commun
-ROS_ROBOT_NAME=mon_robot
+# Common
+ROS_ROBOT_NAME=my_robot
 ROS_WORKSPACE=/home/pi/ros_ws
 
 # ROS1 Noetic
@@ -31,93 +31,94 @@ ROS_RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 
 ## adnrpi-ros-config
 
-### Voir la configuration actuelle
+### Show current configuration
 
 ```bash
 adnrpi-ros-config show
 ```
 
-```
+```text
 === ADNRPi ROS Configuration ===
   ROS2 Humble : installed
   Config file : /etc/ros/adnrpi-ros.conf
 
   ROS_DOMAIN_ID              = 42
   ROS_RMW_IMPLEMENTATION     = rmw_cyclonedds_cpp
-  ROS_ROBOT_NAME             = mon_robot
+  ROS_ROBOT_NAME             = my_robot
 ```
 
-### Assistant interactif
+### Interactive setup wizard
 
 ```bash
 sudo adnrpi-ros-config
-# ou
+# or explicitly
 sudo adnrpi-ros-config interactive
 ```
 
-Guide pas-à-pas pour configurer tous les paramètres.
+Step-by-step guide to configure all parameters.
 
-### Modifier un paramètre directement
+### Set a parameter directly
 
 ```bash
 sudo adnrpi-ros-config set ROS_MASTER_URI http://192.168.1.10:11311
 sudo adnrpi-ros-config set ROS_DOMAIN_ID 42
-sudo adnrpi-ros-config set ROS_ROBOT_NAME mon_robot
+sudo adnrpi-ros-config set ROS_ROBOT_NAME my_robot
 sudo adnrpi-ros-config set ROS_WORKSPACE /home/pi/ros_ws
 ```
 
-### Supprimer un paramètre
+### Remove a parameter
 
 ```bash
 sudo adnrpi-ros-config unset ROS_MASTER_URI
 ```
 
-### Tester la connectivité
+### Test connectivity
 
 ```bash
 adnrpi-ros-config test
 ```
 
-```
+```text
 === ROS connectivity test ===
-  ROS2 nodes (domain 42): OK — /mon_noeud /autre_noeud
+  ROS2 nodes (domain 42): OK — /my_node /other_node
 ```
 
-### Appliquer manuellement
+### Apply manually
 
-Si tu modifies `/etc/ros/adnrpi-ros.conf` à la main :
+If you edit `/etc/ros/adnrpi-ros.conf` by hand:
 
 ```bash
 sudo adnrpi-ros-config apply
 source /etc/bash.bashrc
 ```
 
-## Paramètres disponibles
+## Parameters reference
 
-| Paramètre | ROS | Description |
+| Parameter | ROS | Description |
 |-----------|-----|-------------|
-| `ROS_ROBOT_NAME` | ROS1+2 | Nom du robot, namespace, hostname |
-| `ROS_WORKSPACE` | ROS1+2 | Workspace à sourcer automatiquement |
-| `ROS_MASTER_URI` | ROS1 | URI du master ROS1 |
-| `ROS_HOSTNAME` | ROS1 | Hostname annoncé sur le réseau ROS |
-| `ROS_IP` | ROS1 | IP annoncée (alternative à hostname) |
-| `ROS_DOMAIN_ID` | ROS2 | Isolation réseau (0-232, défaut: 0) |
-| `ROS_RMW_IMPLEMENTATION` | ROS2 | Middleware DDS |
+| `ROS_ROBOT_NAME` | ROS1+2 | Robot name, used as namespace and hostname |
+| `ROS_WORKSPACE` | ROS1+2 | Workspace path to source automatically |
+| `ROS_MASTER_URI` | ROS1 | URI of the ROS1 master node |
+| `ROS_HOSTNAME` | ROS1 | Hostname advertised on the ROS network |
+| `ROS_IP` | ROS1 | IP advertised (alternative to hostname) |
+| `ROS_DOMAIN_ID` | ROS2 | Network isolation (0-232, default: 0) |
+| `ROS_RMW_IMPLEMENTATION` | ROS2 | DDS middleware |
 
-## Fichiers
+## Files
 
-| Fichier | Description |
-|---------|-------------|
-| `/etc/ros/adnrpi-ros.conf` | Config persistée (key=value) |
-| `/etc/bash.bashrc` | Block ROS auto-généré (ne pas éditer à la main) |
-| `/var/log/adnrpi-firstboot.log` | Log du premier démarrage |
+| File | Description |
+|------|-------------|
+| `/etc/ros/adnrpi-ros.conf` | Persistent config (key=value) |
+| `/etc/bash.bashrc` | Auto-generated ROS block (do not edit manually) |
+| `/var/log/adnrpi-firstboot.log` | First boot log |
 
-## Packages installés
+## Installed packages
 
 ### ROS2 Humble
-- `ros-humble-ros-base` — middleware complet
+
+- `ros-humble-ros-base` — full middleware
 - `ros-humble-tf2`, `tf2-ros`, `tf2-tools`
-- `ros-humble-nav-msgs`, `geometry-msgs`, `sensor-msgs`
+- `ros-humble-nav-msgs`, `geometry-msgs`, `sensor-msgs`, `std-msgs`
 - `ros-humble-image-transport`, `compressed-image-transport`
 - `ros-humble-rosbridge-suite` — WebSocket bridge
 - `ros-humble-teleop-twist-joy`, `teleop-twist-keyboard`
@@ -126,9 +127,10 @@ source /etc/bash.bashrc
 - `python3-colcon-common-extensions`, `python3-rosdep`
 
 ### ROS1 Noetic
-- `ros-noetic-ros-base` — middleware complet
+
+- `ros-noetic-ros-base` — full middleware
 - `ros-noetic-tf`, `tf2`, `tf2-ros`, `tf2-tools`
-- `ros-noetic-nav-msgs`, `geometry-msgs`, `sensor-msgs`
+- `ros-noetic-nav-msgs`, `geometry-msgs`, `sensor-msgs`, `std-msgs`
 - `ros-noetic-image-transport`, `compressed-image-transport`
 - `ros-noetic-rosserial`, `rosserial-arduino`
 - `ros-noetic-rosbridge-suite`

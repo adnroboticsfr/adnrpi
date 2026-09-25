@@ -1,29 +1,31 @@
-# SSH via USB OTG
+# SSH over USB OTG
 
-L'ADNRPi One expose son port OTG comme une interface réseau USB (gadget NCM). **Un seul câble** alimente la carte et donne accès SSH — sans Ethernet, sans WiFi.
+The ADNRPi One exposes its OTG port as a USB network interface (NCM gadget). A **single cable** powers the board and provides SSH access — no Ethernet, no WiFi needed.
 
-## Connexion
+## Connect
 
-1. Branche un câble USB entre le **port OTG** de l'ADNRPi et ton ordinateur
-2. Configure l'interface réseau USB sur ton PC :
+1. Plug a USB cable between the **OTG port** of the ADNRPi and your computer
+2. Configure the USB network interface on your machine:
 
-**Linux :**
+**Linux:**
+
 ```bash
 sudo ip addr add 172.22.1.2/24 dev usb0
 sudo ip link set usb0 up
 ```
 
-**Windows :** L'interface apparaît comme "RNDIS/Ethernet Gadget" — assigne l'IP `172.22.1.2` manuellement (masque `255.255.255.0`).
+**Windows:** The interface appears as "RNDIS/Ethernet Gadget" — assign IP `172.22.1.2` manually (mask `255.255.255.0`).
 
-**macOS :** L'interface apparaît automatiquement — assigne `172.22.1.2` dans les préférences réseau.
+**macOS:** The interface appears automatically — assign `172.22.1.2` in Network preferences.
 
-3. Connecte-toi :
+1. Connect:
+
 ```bash
 ssh root@172.22.1.1
 ```
 
 ## Notes
 
-- L'IP de la carte est toujours `172.22.1.1`
-- Débrancher le câble coupe aussi l'alimentation
-- Pour des workloads intensifs (overclock 1368 MHz), préfère une alimentation 5V/2A dédiée
+- The board IP is always `172.22.1.1`
+- Unplugging the cable also cuts power
+- For sustained workloads at 1368 MHz overclock, use a dedicated 5V/2A power supply — a computer USB port may not deliver enough current

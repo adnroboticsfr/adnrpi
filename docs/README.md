@@ -1,10 +1,10 @@
-# Documentation ADNRPi
+# Documentation
 
 | Page | Description |
 |------|-------------|
-| [Démarrage rapide](getting-started.md) | Flasher une image et démarrer |
-| [Premier démarrage](first-boot.md) | Configurer WiFi, hostname, SSH depuis la carte SD |
-| [Configuration ROS](ros-configuration.md) | Configurer ROS1/ROS2, `adnrpi-ros-config` |
-| [Overclock CPU](H3-OVERCLOCK.md) | Passer le H3 à 1368 MHz |
-| [SSH via USB](ssh-usb.md) | Accès SSH par le port OTG |
-| [Builder une image](build.md) | Lancer un build sur GitHub Actions ou en local |
+| [Getting Started](getting-started.md) | Flash an image and boot |
+| [First Boot Configuration](first-boot.md) | Configure WiFi, hostname, SSH from the SD card |
+| [ROS Configuration](ros-configuration.md) | ROS1/ROS2 setup, `adnrpi-ros-config` tool |
+| [H3 CPU Overclock](H3-OVERCLOCK.md) | Push the H3 to 1368 MHz |
+| [SSH over USB](ssh-usb.md) | SSH access without Ethernet |
+| [Building Images](build.md) | GitHub Actions and local builds |

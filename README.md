@@ -11,12 +11,12 @@ Custom Armbian image builder for the ADNRPi One (Allwinner H3) by **ADN Robotics
 
 | | |
 |---|---|
-| [Démarrage rapide](docs/getting-started.md) | Flasher et démarrer |
-| [Premier démarrage](docs/first-boot.md) | Configurer depuis la carte SD |
-| [Configuration ROS](docs/ros-configuration.md) | ROS1/ROS2 + `adnrpi-ros-config` |
-| [SSH via USB](docs/ssh-usb.md) | Accès sans Ethernet |
-| [Builder une image](docs/build.md) | GitHub Actions + local |
-| [Overclock H3](docs/H3-OVERCLOCK.md) | 1296 → 1368 MHz |
+| [Getting Started](docs/getting-started.md) | Flash an image and boot |
+| [First Boot](docs/first-boot.md) | Configure from the SD card |
+| [ROS Configuration](docs/ros-configuration.md) | ROS1/ROS2 + `adnrpi-ros-config` |
+| [SSH over USB](docs/ssh-usb.md) | Access without Ethernet |
+| [Build an image](docs/build.md) | GitHub Actions + local build |
+| [H3 Overclock](docs/H3-OVERCLOCK.md) | 1296 → 1368 MHz |
 
 ---
 

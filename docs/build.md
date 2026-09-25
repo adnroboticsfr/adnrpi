@@ -1,60 +1,62 @@
-# Builder une image
+# Building Images
 
-## Via GitHub Actions (recommandé)
+## Via GitHub Actions (recommended)
 
-### Image unique (test rapide)
+### Single image (quick test)
 
-1. Va sur **Actions → Build single image**
-2. Clique **Run workflow**
-3. Entre le nom du config (sans `.conf`) :
+1. Go to **Actions → Build single image**
+2. Click **Run workflow**
+3. Enter the config name (without `.conf`):
    - `adnrpi1-trixie-server`
    - `adnrpi1-jammy-ros2-server`
    - `adnrpi1-noble-desktop_XFCE`
-4. Lance — résultat disponible dans les artefacts (~40 min)
+4. Run — artifact available in ~40 min
 
-### Toutes les images
+### All images
 
-1. Va sur **Actions → Build Images**
-2. Clique **Run workflow** sur la branche `develop`
-3. Toutes les configs de `configs/` sont buildées en parallèle (~60 min)
+1. Go to **Actions → Build Images**
+2. Click **Run workflow** on the `develop` branch
+3. All configs in `configs/` are built in parallel (~60 min)
 
-### Kernel uniquement
+### Kernel only
 
-Pour tester un patch kernel sans builder l'image complète :
+To test a kernel patch without building the full image:
 
 1. **Actions → Build kernel only**
-2. Sélectionne la branche kernel (`legacy` = 6.12, `current` = 6.18)
+2. Select the kernel branch (`legacy` = 6.12, `current` = 6.18)
 
-### U-Boot uniquement
+### U-Boot only
 
-Pour tester le logo de boot ou le defconfig :
+To test the boot logo or defconfig:
 
 1. **Actions → Build U-Boot only**
-2. Le `.deb` généré peut s'installer directement sur une carte :
+2. The generated `.deb` can be installed directly on a running board:
+
 ```bash
 dpkg -i linux-u-boot-adnrpi1-current_*.deb
 dd if=/usr/lib/linux-u-boot-current-adnrpi1/u-boot-sunxi-with-spl.bin \
    of=/dev/mmcblk0 bs=1024 seek=8 conv=fsync
 ```
 
-## En local (Linux/WSL2 requis)
+## Local build (Linux / WSL2 required)
 
 ```bash
 git clone https://github.com/armbian/build.git
 cd build
 
-# Copier les patches et configs
+# Copy patches and configs
 cp -R /path/to/adnrpi/boards/* config/boards/
 cp -R /path/to/adnrpi/userpatches/* userpatches/
 cp /path/to/adnrpi/configs/adnrpi1-trixie-server.conf userpatches/config-settings.conf
 
-# Builder
+# Build
 ./compile.sh settings BOARD=adnrpi1 BRANCH=current RELEASE=trixie
 ```
 
-## Ajouter une nouvelle image
+## Add a new image
 
-1. Crée `configs/adnrpi1-{codename}-{variant}.conf` :
+1. Create `configs/adnrpi1-{codename}-{variant}.conf`:
+
 ```ini
 BOARD="adnrpi1"
 BOOTSIZE="512"
@@ -64,11 +66,11 @@ BUILD_DESKTOP="no"
 BRANCH="current"
 ```
 
-2. Push sur `develop` — le workflow la détecte automatiquement dans la prochaine run
+1. Push to `develop` — the workflow picks it up automatically on the next run.
 
-## Créer une release
+## Create a release
 
-1. Attends qu'un **Build Images** réussisse sur `develop`
+1. Wait for a successful **Build Images** run on `develop`
 2. **Actions → Release Images → Run workflow**
-3. Entre le numéro de version (ex: `v1.0.0`)
-4. Les artefacts sont attachés à la release GitHub
+3. Enter the version number (e.g. `v1.0.0`)
+4. Artifacts are attached to the GitHub release

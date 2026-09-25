@@ -1,5 +1,78 @@
 # First Boot Configuration
 
+There are two ways to configure your ADNRPi:
+
+| Method | When | How |
+| --- | --- | --- |
+| **Interactive wizard** | On first login | Runs automatically, asks questions step by step |
+| **Config file** | Before first boot | Edit `adnrpi-config.txt` on the SD card |
+
+Both methods cover the same settings. Use the file if you want to prepare the card before booting; the wizard handles everything else interactively.
+
+---
+
+## Interactive wizard (adnrpi-setup)
+
+The wizard launches automatically on every root login until configuration is confirmed. Once complete it stops. If you skip it (Ctrl+C), it runs again next time.
+
+```text
+  ┌─────────────────────────────────────────────┐
+  │            ADNRPi Setup Wizard               │
+  └─────────────────────────────────────────────┘
+
+  Welcome to your ADNRPi One!
+  Press ENTER to keep the default value shown in [ ].
+
+  ── System ────────────────────────────────────
+
+    Hostname [adnrpi]:
+    Timezone [Europe/Paris]:
+    Language [en_US.UTF-8]:
+
+  ── Keyboard ──────────────────────────────────
+
+    Layout   [us]:
+    Variant  (optional) []:
+
+  ── Security ──────────────────────────────────
+
+    Root password [press ENTER to keep current]:
+    Create user 'pi' [Y/n]:
+    Password for 'pi' [press ENTER to keep current]:
+
+  ── WiFi (optional) ───────────────────────────
+
+    Configure WiFi [y/N]:
+
+  ── Summary ───────────────────────────────────
+
+    Hostname  : adnrpi
+    Keyboard  : us
+    User 'pi' : yes
+    WiFi      : skipped
+
+    Apply this configuration [Y/n]:
+```
+
+Run it at any time to reconfigure:
+
+```bash
+sudo adnrpi-setup
+```
+
+### OS updates
+
+When a new ADNRPi image is installed with new configuration options, the wizard detects the version change and notifies you on next login:
+
+```text
+  ADNRPi: New configuration options are available after this update.
+  Run 'adnrpi-setup' to review and apply them.
+```
+
+---
+
+## Config file (adnrpi-config.txt)
+
 `adnrpi-config.txt` lives on the FAT boot partition of the SD card. It can be read and edited from Windows, macOS, and Linux **before** inserting the card into the board.
 
 ## Enable configuration

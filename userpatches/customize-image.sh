@@ -377,6 +377,24 @@ installFirstBootConfig() {
         echo "First-boot service installed and enabled"
     fi
 
+    # Install the interactive setup wizard
+    local setupSrc="/tmp/overlay/adnrpi-setup"
+    local setupDest="/usr/local/bin/adnrpi-setup"
+    if [[ -f "${setupSrc}" ]]; then
+        cp -v "${setupSrc}" "${setupDest}"
+        chmod 755 "${setupDest}"
+        echo "Setup wizard installed to ${setupDest}"
+    fi
+
+    # Install the profile.d trigger (auto-launch on login until setup is done)
+    local profileSrc="/tmp/overlay/adnrpi-setup-profile.sh"
+    local profileDest="/etc/profile.d/adnrpi-setup.sh"
+    if [[ -f "${profileSrc}" ]]; then
+        cp -v "${profileSrc}" "${profileDest}"
+        chmod 644 "${profileDest}"
+        echo "Setup profile trigger installed to ${profileDest}"
+    fi
+
     echo "ADNRPi first-boot configuration system ... [DONE]"
 }
 

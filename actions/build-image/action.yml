@@ -1,0 +1,122 @@
+name: "Armbian/build"
+author: "Stefan Dej"
+description: "Build armbian images"
+inputs:
+  configfile:
+    description: "Config file name"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    #- name: Runner prepare
+    #  uses: ./actions/runner-prepare
+    - name: Enable QEMU for ARM builds
+      shell: bash
+      run: |
+        echo "⚙️ Installing and enabling QEMU binfmt for ARM"
+        sudo apt-get update
+        sudo apt-get install -y qemu-user-static binfmt-support qemu-system-arm
+        sudo update-binfmts --enable qemu-arm
+        sudo update-binfmts --enable qemu-aarch64
+        docker run --privileged --rm tonistiigi/binfmt --install all
+
+    - name: Free Github Runner
+      uses: descriptinc/free-disk-space@main
+      with:
+        android: true
+        dotnet: true
+        haskell: true
+        large-packages: true
+        docker-images: true
+        swap-storage: true
+
+    - name: Read configs
+      id: config
+      shell: bash
+      run: |
+        source ./build-configs/configs/config-default.conf
+        source ./build-configs/configs/${{ inputs.configfile }}.conf
+
+        echo "armbian_repository=${ARMBIAN_REPOSITORY}" >> $GITHUB_OUTPUT
+        echo "armbian_branch=${ARMBIAN_BRANCH}" >> $GITHUB_OUTPUT
+
+    - name: Checkout armbian Repository
+      uses: actions/checkout@v4
+      with:
+        #fetch-depth: 1
+        fetch-depth: 0
+        repository: ${{ steps.config.outputs.armbian_repository }}
+        ref: ${{ steps.config.outputs.armbian_branch }}
+        path: build
+
+    - name: Update Armbian Repository
+      shell: bash
+      run: |
+        cd build
+        git pull origin ${{ steps.config.outputs.armbian_branch }}
+
+
+    - name: Create config-default.conf
+      shell: bash
+      run: |
+        mkdir -p ./build/userpatches
+        cp ./build-configs/configs/config-default.conf ./build/userpatches/config-settings.conf
+        cat ./build-configs/configs/${{ inputs.configfile }}.conf >> ./build/userpatches/config-settings.conf
+        echo "::group::Output config-settings.conf"
+        cat ./build/userpatches/config-settings.conf
+        echo "::endgroup::"
+
+    - name: Fix the NetworkManager applet package name for Debian 14
+      shell: bash
+      run: |
+        bash ./build-configs/tools/fix-nm-applet-in-framework.sh ./build
+
+    - name: Add custom board configuration
+      shell: bash
+      run: |
+        if [[ -d ./build-configs/boards ]]; then
+          cp -R -v ./build-configs/boards/* ./build/config/boards
+        else
+          echo -e "\e[0;33mNo custom board configuration found ... [SKIPPED]\e[0m"
+          exit 0
+        fi
+
+    - name: Add custom userpatches
+      shell: bash
+      run: |
+        if [[ -d ./build-configs/userpatches ]]; then
+          cp -R -v ./build-configs/userpatches/* ./build/userpatches
+        else
+          echo -e "\e[0;33mNo custom userpatches found ... [SKIPPED]\e[0m"
+          exit 0
+        fi
+
+    - name: sed VERSION
+      shell: bash
+      run: |
+        sed -i 's/-trunk//' ./build/VERSION
+        echo "::group::Output VERSION"
+        cat ./build/VERSION
+        echo "::endgroup::"
+
+    - name: Build Image
+      shell: bash
+      env:
+        # CI runners have no tty, so armbian's docker launcher forwards an empty
+        # COLUMNS into the container; it leaks into the rootfs chroot and crashes
+        # mksh-based maintainer scripts (rng-tools preinst on bullseye) with
+        # "COLUMNS: bad number". Give it a real value so the forward stays valid.
+        COLUMNS: "120"
+      run: |
+        cd ./build
+        ./compile.sh settings
+
+    - name: Fix userrights
+      shell: bash
+      run: |
+        sudo chown -R $USER:$USER ${{ github.workspace }}/build || true
+        sudo chmod 0777 -R ${{ github.workspace }}/build || true
+        echo "::group::List files"
+        ls -l ${{ github.workspace }}/build
+        echo "::endgroup::"

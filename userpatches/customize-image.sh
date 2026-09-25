@@ -45,12 +45,14 @@ Main() {
                 copyOnboardConf
                 patchOnboardAutostart
                 installScreensaverSetup
-                # Chromium white-window bug: trixie generation only (noble
-                # renders fine, leave it alone)
                 case "${RELEASE}" in
                     trixie|forky|sid) installChromiumFlags ;;
                 esac
             fi
+            case "${ADNRPI_ROS}" in
+                ros2) installROS2Humble ;;
+                ros1) installROS1Noetic ;;
+            esac
             ;;
     esac
 }
@@ -232,6 +234,108 @@ installChromiumFlags() {
     cp -v /tmp/overlay/adnrpi-mali-softgl /etc/chromium.d/adnrpi-mali-softgl
     rm -f /etc/chromium.d/armbian-flags
     echo "Install Chromium software-GL environment ... [DONE]"
+}
+
+installROS2Humble() {
+    echo "Installing ROS2 Humble (armhf) ..."
+    apt-get install -y curl gnupg lsb-release
+
+    curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc \
+        | gpg --dearmor -o /usr/share/keyrings/ros-archive-keyring.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \
+http://packages.ros.org/ros2/ubuntu jammy main" \
+        > /etc/apt/sources.list.d/ros2.list
+
+    apt-get update
+
+    # ros-base: core middleware (rcl, rclpy, rclcpp, topics, services, actions)
+    apt-get install -y \
+        ros-humble-ros-base \
+        python3-colcon-common-extensions \
+        python3-rosdep \
+        python3-argcomplete \
+        ros-humble-rmw-cyclonedds-cpp \
+        ros-humble-diagnostic-updater \
+        ros-humble-tf2 \
+        ros-humble-tf2-ros \
+        ros-humble-tf2-tools \
+        ros-humble-geometry-msgs \
+        ros-humble-sensor-msgs \
+        ros-humble-nav-msgs \
+        ros-humble-std-msgs \
+        ros-humble-std-srvs \
+        ros-humble-image-transport \
+        ros-humble-compressed-image-transport \
+        ros-humble-joy \
+        ros-humble-teleop-twist-joy \
+        ros-humble-teleop-twist-keyboard \
+        ros-humble-serial-driver \
+        ros-humble-rosbridge-suite \
+        ros-humble-robot-state-publisher \
+        ros-humble-joint-state-publisher \
+        ros-humble-xacro || true
+
+    rosdep init || true
+    rosdep update || true
+
+    # Source ROS2 automatically for all users
+    echo "source /opt/ros/humble/setup.bash" >> /etc/bash.bashrc
+    echo "source /opt/ros/humble/setup.bash" >> /etc/skel/.bashrc
+
+    echo "Installing ROS2 Humble ... [DONE]"
+}
+
+installROS1Noetic() {
+    echo "Installing ROS1 Noetic (armhf via focal repo on jammy) ..."
+    apt-get install -y curl gnupg lsb-release
+
+    # ROS1 Noetic: official packages target Ubuntu Focal (20.04).
+    # Using focal repo on Jammy — works for ros-base + common packages.
+    curl -sSL 'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0xC1CF6E31E6BADE8868B172B4F42ED6FBAB17C654' \
+        | apt-key add -
+    echo "deb http://packages.ros.org/ros/ubuntu focal main" \
+        > /etc/apt/sources.list.d/ros-latest.list
+
+    apt-get update
+
+    apt-get install -y \
+        ros-noetic-ros-base \
+        python3-rosdep \
+        python3-rosinstall \
+        python3-rosinstall-generator \
+        python3-wstool \
+        build-essential \
+        ros-noetic-geometry-msgs \
+        ros-noetic-sensor-msgs \
+        ros-noetic-nav-msgs \
+        ros-noetic-std-msgs \
+        ros-noetic-std-srvs \
+        ros-noetic-tf \
+        ros-noetic-tf2 \
+        ros-noetic-tf2-ros \
+        ros-noetic-tf2-tools \
+        ros-noetic-image-transport \
+        ros-noetic-compressed-image-transport \
+        ros-noetic-joy \
+        ros-noetic-teleop-twist-joy \
+        ros-noetic-teleop-twist-keyboard \
+        ros-noetic-rosserial \
+        ros-noetic-rosserial-arduino \
+        ros-noetic-rosbridge-suite \
+        ros-noetic-robot-state-publisher \
+        ros-noetic-joint-state-publisher \
+        ros-noetic-xacro \
+        ros-noetic-map-server \
+        ros-noetic-move-base-msgs || true
+
+    rosdep init || true
+    rosdep update || true
+
+    # Source ROS1 automatically for all users
+    echo "source /opt/ros/noetic/setup.bash" >> /etc/bash.bashrc
+    echo "source /opt/ros/noetic/setup.bash" >> /etc/skel/.bashrc
+
+    echo "Installing ROS1 Noetic ... [DONE]"
 }
 
 installFirstBootConfig() {

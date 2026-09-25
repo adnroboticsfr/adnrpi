@@ -7,6 +7,19 @@ Custom Armbian image builder for the ADNRPi One (Allwinner H3) by **ADN Robotics
 
 ---
 
+## Documentation
+
+| | |
+|---|---|
+| [Démarrage rapide](docs/getting-started.md) | Flasher et démarrer |
+| [Premier démarrage](docs/first-boot.md) | Configurer depuis la carte SD |
+| [Configuration ROS](docs/ros-configuration.md) | ROS1/ROS2 + `adnrpi-ros-config` |
+| [SSH via USB](docs/ssh-usb.md) | Accès sans Ethernet |
+| [Builder une image](docs/build.md) | GitHub Actions + local |
+| [Overclock H3](docs/H3-OVERCLOCK.md) | 1296 → 1368 MHz |
+
+---
+
 ## What is this?
 
 `adnrpi` builds ready-to-flash Armbian images for the **ADNRPi One** and **ADNRPi Pad** boards. It wraps the official Armbian build system with board-specific patches, kernel overlays, and automation scripts so you get a working image without manual configuration.

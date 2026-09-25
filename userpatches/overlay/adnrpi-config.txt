@@ -62,3 +62,36 @@ TIMEZONE=
 # ============ LOCALE ============
 # Examples: fr_FR.UTF-8, en_US.UTF-8, de_DE.UTF-8
 LOCALE=
+
+# ============================================================
+# ROS CONFIGURATION (only applies to ROS images)
+# ============================================================
+
+# ============ ROS COMMON ============
+# Name of the robot (used for namespace and hostname if HOSTNAME is empty)
+ROS_ROBOT_NAME=
+
+# Path to a ROS workspace to source automatically (leave empty to skip)
+# Example: /home/pi/ros_ws
+ROS_WORKSPACE=
+
+# ============ ROS1 (Noetic) ============
+# URI of the ROS master node
+# Default: http://localhost:11311
+ROS_MASTER_URI=
+
+# Hostname or IP this machine advertises to the ROS network
+# Leave empty to use the system hostname
+ROS_HOSTNAME=
+
+# IP this machine advertises (alternative to ROS_HOSTNAME)
+ROS_IP=
+
+# ============ ROS2 (Humble) ============
+# ROS2 Domain ID (0-232, isolates ROS2 networks on the same subnet)
+# Default: 0
+ROS_DOMAIN_ID=
+
+# ROS2 middleware (leave empty for default cyclonedds)
+# Options: rmw_cyclonedds_cpp, rmw_fastrtps_cpp
+ROS_RMW_IMPLEMENTATION=

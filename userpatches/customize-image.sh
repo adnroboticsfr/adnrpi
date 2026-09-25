@@ -28,9 +28,7 @@ Main() {
         echo "Installing dwarves (pahole) for Bullseye ... [DONE]"
     fi
 
-    # TODO: First-boot config system disabled for now (not working)
-    # Re-enable when fixed
-    # installFirstBootConfig
+    installFirstBootConfig
 
     case "${BOARD}" in
         adnrpi1)

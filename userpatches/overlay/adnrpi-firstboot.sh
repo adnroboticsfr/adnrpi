@@ -343,6 +343,75 @@ process_cmdline_wifi_country() {
 }
 
 # ============================================================
+# ROS CONFIGURATION
+# ============================================================
+
+configure_ros() {
+    local ros_env_file="/etc/ros/environment"
+    local bashrc_global="/etc/bash.bashrc"
+    local ros1_setup="/opt/ros/noetic/setup.bash"
+    local ros2_setup="/opt/ros/humble/setup.bash"
+    local ros_detected=false
+
+    [[ -f "$ros1_setup" ]] && ros_detected=true
+    [[ -f "$ros2_setup" ]] && ros_detected=true
+    [[ "$ros_detected" == "false" ]] && return 0
+
+    log "[ROS] Configuring ROS environment..."
+    mkdir -p /etc/ros
+
+    # ---- Robot name → hostname if HOSTNAME not set ----
+    if [[ -n "$ROS_ROBOT_NAME" ]] && [[ -z "$HOSTNAME" ]]; then
+        hostnamectl set-hostname "$ROS_ROBOT_NAME" 2>/dev/null
+        echo "$ROS_ROBOT_NAME" > /etc/hostname
+    fi
+
+    # ---- ROS1 Noetic ----
+    if [[ -f "$ros1_setup" ]]; then
+        log "[ROS1] Writing ROS1 environment..."
+        {
+            [[ -n "$ROS_MASTER_URI" ]]  && echo "export ROS_MASTER_URI=${ROS_MASTER_URI}"
+            [[ -n "$ROS_HOSTNAME" ]]    && echo "export ROS_HOSTNAME=${ROS_HOSTNAME}"
+            [[ -n "$ROS_IP" ]]          && echo "export ROS_IP=${ROS_IP}"
+        } >> "$ros_env_file"
+
+        # Persist in global bashrc
+        {
+            echo "# ROS1 Noetic"
+            echo "source ${ros1_setup}"
+            [[ -n "$ROS_MASTER_URI" ]]  && echo "export ROS_MASTER_URI=${ROS_MASTER_URI}"
+            [[ -n "$ROS_HOSTNAME" ]]    && echo "export ROS_HOSTNAME=${ROS_HOSTNAME}"
+            [[ -n "$ROS_IP" ]]          && echo "export ROS_IP=${ROS_IP}"
+            [[ -n "$ROS_WORKSPACE" ]] && [[ -f "${ROS_WORKSPACE}/devel/setup.bash" ]] && \
+                echo "source ${ROS_WORKSPACE}/devel/setup.bash"
+        } >> "$bashrc_global"
+    fi
+
+    # ---- ROS2 Humble ----
+    if [[ -f "$ros2_setup" ]]; then
+        log "[ROS2] Writing ROS2 environment..."
+        local domain="${ROS_DOMAIN_ID:-0}"
+        local rmw="${ROS_RMW_IMPLEMENTATION:-rmw_cyclonedds_cpp}"
+        {
+            echo "export ROS_DOMAIN_ID=${domain}"
+            echo "export RMW_IMPLEMENTATION=${rmw}"
+        } >> "$ros_env_file"
+
+        {
+            echo "# ROS2 Humble"
+            echo "source ${ros2_setup}"
+            echo "export ROS_DOMAIN_ID=${domain}"
+            echo "export RMW_IMPLEMENTATION=${rmw}"
+            [[ -n "$ROS_WORKSPACE" ]] && [[ -f "${ROS_WORKSPACE}/install/setup.bash" ]] && \
+                echo "source ${ROS_WORKSPACE}/install/setup.bash"
+        } >> "$bashrc_global"
+    fi
+
+    [[ -f "$ros_env_file" ]] && chmod 644 "$ros_env_file"
+    log "[ROS] ROS environment configured."
+}
+
+# ============================================================
 # ADNRPI NATIVE CONFIGURATION
 # ============================================================
 
@@ -487,6 +556,9 @@ EOF
         echo "$USERNAME:$USER_PASSWORD" | chpasswd
         log "[ADNRPI] User $USERNAME created"
     fi
+
+    # ============ ROS CONFIGURATION ============
+    configure_ros
 
     # Mark configuration as done
     log "[ADNRPI] Configuration completed!"

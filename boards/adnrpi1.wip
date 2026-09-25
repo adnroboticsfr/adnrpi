@@ -1,7 +1,7 @@
 # Allwinner H3 quad core 1Gb SoC
-BOARD_NAME="SmartPi One"
+BOARD_NAME="ADNRPi One"
 BOARDFAMILY="sun8i"
-BOOTCONFIG="smartpi1_defconfig"
+BOOTCONFIG="adnrpi1_defconfig"
 MODULES_LEGACY="g_ncm"
 MODULES_CURRENT="g_ncm"
 SERIALCON="ttyS0"
@@ -14,7 +14,7 @@ KERNEL_TARGET="legacy,current,edge"
 # The blob linked into the binary is drivers/video/u_boot_logo.bmp (see
 # obj-$(CONFIG_VIDEO_LOGO) in drivers/video/Makefile); tools/logos/ only feeds
 # the legacy bmp_logo tool, so overwriting it alone changes nothing.
-function pre_config_uboot_target__smartpi1_adnrpi_logo() {
+function pre_config_uboot_target__adnrpi1_adnrpi_logo() {
 	declare logo="${SRC}/userpatches/overlay/u-boot-logo.bmp"
 	[[ -f "${logo}" ]] || { display_alert "u-boot for ${BOARD}" "ADNRPi logo not found, keeping the default" "wrn"; return 0; }
 	display_alert "u-boot for ${BOARD}" "installing the ADNRPi boot logo" "info"

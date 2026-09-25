@@ -1,10 +1,10 @@
 #!/bin/sh
-# Enable or disable the SmartPi One CPU overclock (1368 MHz; the CPU
+# Enable or disable the ADNRPi One CPU overclock (1368 MHz; the CPU
 # voltage is fixed by the board hardware, no regulator is involved).
 #
-#   smartpi-oc on      enable the overclock (takes effect after reboot)
-#   smartpi-oc off     back to stock (max 1296 MHz, adaptive governor)
-#   smartpi-oc status  show the current state
+#   adnrpi-oc on      enable the overclock (takes effect after reboot)
+#   adnrpi-oc off     back to stock (max 1296 MHz, adaptive governor)
+#   adnrpi-oc status  show the current state
 #
 # "on" enables the opp1368 device-tree overlay and boots with the
 # performance governor: the CPU sits at 1368 MHz instead of hopping
@@ -14,7 +14,7 @@ ENV=/boot/armbianEnv.txt
 TOKEN_OVERLAY="opp1368"
 TOKEN_GOV="cpufreq.default_governor=performance"
 
-[ "$(id -u)" = "0" ] || { echo "run as root (sudo smartpi-oc ...)"; exit 1; }
+[ "$(id -u)" = "0" ] || { echo "run as root (sudo adnrpi-oc ...)"; exit 1; }
 [ -f "$ENV" ] || { echo "$ENV not found"; exit 1; }
 
 current_state() {
@@ -57,7 +57,7 @@ case "$1" in
         fi
         ;;
     *)
-        echo "usage: smartpi-oc on|off|status"
+        echo "usage: adnrpi-oc on|off|status"
         exit 1
         ;;
 esac

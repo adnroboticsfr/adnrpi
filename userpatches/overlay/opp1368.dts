@@ -2,11 +2,11 @@
 /plugin/;
 
 /* Enable the 1368 MHz CPU OPP. The opp-microvolt value is declarative
- * only: the SmartPi One (NanoPi M1 design) has no software-controlled
+ * only: the ADNRPi One (NanoPi M1 design) has no software-controlled
  * CPU regulator, VDD-CPUX is fixed by the board hardware, so cpufreq
  * scales frequency only. 1368 MHz is stress-test validated on ADNRPi
  * boards at that fixed voltage. Applied as a user overlay
- * (/boot/overlay-user) by "smartpi-oc on".
+ * (/boot/overlay-user) by "adnrpi-oc on".
  */
 
 / {

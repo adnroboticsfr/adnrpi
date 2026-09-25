@@ -9,7 +9,7 @@ running on PLL_CPUX while it relocks, which hard-locks some boards
 during the first DVFS bursts of the boot -- exactly what Armbian fixed
 on sunxi-6.18 by disabling that patch (PR 10083, "fix H3/H5 RCU stall
 / CPU hang during DVFS"), a fix that never reached sunxi-6.12. The
-SmartPi One freezes right after "Reached target Paths." without this.
+ADNRPi One freezes right after "Reached target Paths." without this.
 
 Applied after the megous patchset, this restores the mainline
 notifiers on the legacy kernel.

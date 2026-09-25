@@ -1,9 +1,9 @@
 #!/bin/bash
-# SmartPi First Boot Configuration Script
-# Compatible with both SmartPi config format AND Raspberry Pi Imager files
+# ADNRPi First Boot Configuration Script
+# Compatible with both ADNRPi config format AND Raspberry Pi Imager files
 #
 # Supported configuration methods:
-# 1. SmartPi native: /boot/smartpi-config.txt (with APPLY_CONFIG=1)
+# 1. ADNRPi native: /boot/adnrpi-config.txt (with APPLY_CONFIG=1)
 # 2. Raspberry Pi Imager compatible files (legacy):
 #    - /boot/ssh or /boot/ssh.txt (enable SSH)
 #    - /boot/wpa_supplicant.conf (WiFi configuration)
@@ -15,8 +15,8 @@
 #    - /boot/cmdline.txt (WiFi country code)
 
 BOOT_DIR="/boot"
-LOG_FILE="/var/log/smartpi-firstboot.log"
-CONFIG_FILE="${BOOT_DIR}/smartpi-config.txt"
+LOG_FILE="/var/log/adnrpi-firstboot.log"
+CONFIG_FILE="${BOOT_DIR}/adnrpi-config.txt"
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
@@ -24,7 +24,7 @@ log() {
 
 # ============================================================
 # RASPBERRY PI IMAGER COMPATIBLE FILES
-# These are processed FIRST, before SmartPi config
+# These are processed FIRST, before ADNRPi config
 # ============================================================
 
 process_rpi_ssh() {
@@ -343,19 +343,19 @@ process_cmdline_wifi_country() {
 }
 
 # ============================================================
-# SMARTPI NATIVE CONFIGURATION
+# ADNRPI NATIVE CONFIGURATION
 # ============================================================
 
-process_smartpi_config() {
+process_adnrpi_config() {
     # Check if config file exists
     if [[ ! -f "$CONFIG_FILE" ]]; then
-        log "[SMARTPI] No config file found at $CONFIG_FILE"
+        log "[ADNRPI] No config file found at $CONFIG_FILE"
         return 1
     fi
 
     # Check if already processed
     if [[ -f "${CONFIG_FILE}.done" ]]; then
-        log "[SMARTPI] First boot configuration already completed"
+        log "[ADNRPI] First boot configuration already completed"
         return 0
     fi
 
@@ -364,16 +364,16 @@ process_smartpi_config() {
 
     # Check if user wants to apply configuration
     if [[ "$APPLY_CONFIG" != "1" ]]; then
-        log "[SMARTPI] APPLY_CONFIG is not set to 1, skipping SmartPi configuration"
-        log "[SMARTPI] Edit $CONFIG_FILE and set APPLY_CONFIG=1 to apply settings"
+        log "[ADNRPI] APPLY_CONFIG is not set to 1, skipping ADNRPi configuration"
+        log "[ADNRPI] Edit $CONFIG_FILE and set APPLY_CONFIG=1 to apply settings"
         return 1
     fi
 
-    log "[SMARTPI] Starting SmartPi configuration..."
+    log "[ADNRPI] Starting ADNRPi configuration..."
 
     # ============ HOSTNAME ============
     if [[ -n "$HOSTNAME" ]]; then
-        log "[SMARTPI] Setting hostname to: $HOSTNAME"
+        log "[ADNRPI] Setting hostname to: $HOSTNAME"
         hostnamectl set-hostname "$HOSTNAME" 2>/dev/null
         echo "$HOSTNAME" > /etc/hostname
         sed -i "s/127.0.1.1.*/127.0.1.1\t$HOSTNAME/" /etc/hosts
@@ -384,25 +384,25 @@ process_smartpi_config() {
 
     # ============ SSH ============
     if [[ "$SSH_ENABLED" == "1" ]]; then
-        log "[SMARTPI] Enabling SSH server"
+        log "[ADNRPI] Enabling SSH server"
         systemctl enable ssh 2>/dev/null || systemctl enable sshd 2>/dev/null
         systemctl start ssh 2>/dev/null || systemctl start sshd 2>/dev/null
     elif [[ "$SSH_ENABLED" == "0" ]]; then
-        log "[SMARTPI] Disabling SSH server"
+        log "[ADNRPI] Disabling SSH server"
         systemctl disable ssh 2>/dev/null || systemctl disable sshd 2>/dev/null
         systemctl stop ssh 2>/dev/null || systemctl stop sshd 2>/dev/null
     fi
 
     # ============ TIMEZONE ============
     if [[ -n "$TIMEZONE" ]]; then
-        log "[SMARTPI] Setting timezone to: $TIMEZONE"
+        log "[ADNRPI] Setting timezone to: $TIMEZONE"
         timedatectl set-timezone "$TIMEZONE" 2>/dev/null || \
             ln -sf "/usr/share/zoneinfo/$TIMEZONE" /etc/localtime
     fi
 
     # ============ LOCALE ============
     if [[ -n "$LOCALE" ]]; then
-        log "[SMARTPI] Setting locale to: $LOCALE"
+        log "[ADNRPI] Setting locale to: $LOCALE"
         sed -i "s/^# *${LOCALE}/${LOCALE}/" /etc/locale.gen 2>/dev/null
         locale-gen 2>/dev/null
         update-locale LANG="$LOCALE" 2>/dev/null
@@ -410,7 +410,7 @@ process_smartpi_config() {
 
     # ============ WIFI ============
     if [[ -n "$WIFI_SSID" ]] && [[ -n "$WIFI_PASSWORD" ]]; then
-        log "[SMARTPI] Configuring WiFi: $WIFI_SSID"
+        log "[ADNRPI] Configuring WiFi: $WIFI_SSID"
 
         # Create wpa_supplicant configuration
         WPA_CONF="/etc/wpa_supplicant/wpa_supplicant.conf"
@@ -430,7 +430,7 @@ EOF
 
         # For NetworkManager based systems
         if command -v nmcli &> /dev/null; then
-            log "[SMARTPI] Using NetworkManager for WiFi"
+            log "[ADNRPI] Using NetworkManager for WiFi"
             nmcli dev wifi connect "$WIFI_SSID" password "$WIFI_PASSWORD" 2>/dev/null || true
         fi
 
@@ -440,7 +440,7 @@ EOF
 
     # ============ STATIC IP ============
     if [[ -n "$STATIC_IP" ]] && [[ -n "$GATEWAY" ]]; then
-        log "[SMARTPI] Configuring static IP: $STATIC_IP"
+        log "[ADNRPI] Configuring static IP: $STATIC_IP"
 
         # Detect primary network interface
         IFACE=$(ip route 2>/dev/null | grep default | awk '{print $5}' | head -n1)
@@ -448,7 +448,7 @@ EOF
 
         # For NetworkManager based systems
         if command -v nmcli &> /dev/null; then
-            log "[SMARTPI] Using NetworkManager for static IP"
+            log "[ADNRPI] Using NetworkManager for static IP"
             CON_NAME=$(nmcli -t -f NAME,DEVICE con show 2>/dev/null | grep "$IFACE" | cut -d: -f1 | head -n1)
             if [[ -n "$CON_NAME" ]]; then
                 nmcli con mod "$CON_NAME" ipv4.addresses "$STATIC_IP/${NETMASK:-24}"
@@ -459,7 +459,7 @@ EOF
             fi
         else
             # For /etc/network/interfaces based systems
-            log "[SMARTPI] Using /etc/network/interfaces for static IP"
+            log "[ADNRPI] Using /etc/network/interfaces for static IP"
             mkdir -p /etc/network/interfaces.d
             cat > /etc/network/interfaces.d/static-ip << EOF
 auto $IFACE
@@ -474,22 +474,22 @@ EOF
 
     # ============ ROOT PASSWORD ============
     if [[ -n "$ROOT_PASSWORD" ]]; then
-        log "[SMARTPI] Setting root password"
+        log "[ADNRPI] Setting root password"
         echo "root:$ROOT_PASSWORD" | chpasswd
     fi
 
     # ============ FIRST USER ============
     if [[ -n "$USERNAME" ]] && [[ -n "$USER_PASSWORD" ]]; then
-        log "[SMARTPI] Creating user: $USERNAME"
+        log "[ADNRPI] Creating user: $USERNAME"
         if ! id "$USERNAME" &>/dev/null; then
             useradd -m -G sudo,users -s /bin/bash "$USERNAME" 2>/dev/null
         fi
         echo "$USERNAME:$USER_PASSWORD" | chpasswd
-        log "[SMARTPI] User $USERNAME created"
+        log "[ADNRPI] User $USERNAME created"
     fi
 
     # Mark configuration as done
-    log "[SMARTPI] Configuration completed!"
+    log "[ADNRPI] Configuration completed!"
     mv "$CONFIG_FILE" "${CONFIG_FILE}.done"
 
     return 0
@@ -501,7 +501,7 @@ EOF
 
 main() {
     log "========================================"
-    log "SmartPi First Boot Configuration"
+    log "ADNRPi First Boot Configuration"
     log "========================================"
     log "Checking for configuration files..."
 
@@ -519,8 +519,8 @@ main() {
     process_rpi_hostname && config_applied=true
     process_rpi_firstrun && config_applied=true
 
-    # Then process SmartPi native config
-    process_smartpi_config && config_applied=true
+    # Then process ADNRPi native config
+    process_adnrpi_config && config_applied=true
 
     if [[ "$config_applied" == "true" ]]; then
         log "First boot configuration completed successfully!"
@@ -529,10 +529,10 @@ main() {
     fi
 
     # Disable the service after first run
-    systemctl disable smartpi-firstboot.service 2>/dev/null
+    systemctl disable adnrpi-firstboot.service 2>/dev/null
 
     log "========================================"
-    log "SmartPi First Boot Finished"
+    log "ADNRPi First Boot Finished"
     log "========================================"
 }
 

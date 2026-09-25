@@ -1,5 +1,5 @@
 # ============================================================
-# SmartPi Configuration File
+# ADNRPi Configuration File
 # ============================================================
 # This file is read from the FAT boot partition on first boot.
 # You can edit it on Windows/Mac/Linux before inserting the SD card.

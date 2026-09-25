@@ -19,7 +19,7 @@
 # The inserted code runs on the build host against ${SDCARD} (no chroot
 # quoting), finds the files itself instead of hardcoding a packaging path,
 # and warns if it finds none (which is what we expect once configng ships
-# the fix upstream: see Yumi-Lab/configng branch forky-nm-applet).
+# the fix upstream: see adnroboticsfr/adnrpi branch forky-nm-applet).
 #
 # Usage: fix-nm-applet-in-framework.sh <path to the armbian build tree>
 # Idempotent: running it twice is a no-op.
@@ -37,7 +37,7 @@ import sys
 path = sys.argv[1]
 src = open(path).read()
 
-marker = 'Yumi: renaming the NM applet package'
+marker = 'ADNRPi: renaming the NM applet package'
 if marker in src:
     print('already patched, nothing to do')
     sys.exit(0)
@@ -47,7 +47,7 @@ if anchor not in src:
     sys.exit('anchor not found: the armbian-config install line moved, '
              'this patch needs to be revisited')
 
-block = '''\t\t# Yumi: Debian 14 renamed network-manager-gnome to network-manager-applet,
+block = '''\t\t# ADNRPi: Debian 14 renamed network-manager-gnome to network-manager-applet,
 \t\t# but the armbian-config package still lists the old name in its desktop
 \t\t# package lists. Rename it in the copy that lives in the rootfs.
 \t\tif [[ "${RELEASE}" == "forky" ]]; then
@@ -57,7 +57,7 @@ block = '''\t\t# Yumi: Debian 14 renamed network-manager-gnome to network-manage
 \t\t\t\tdisplay_alert "ADNRPi: renaming the NM applet package in desktop lists" "${#adnrpi_nm_yamls[@]} file(s)" "info"
 \t\t\t\trun_host_command_logged sed -i 's/network-manager-gnome/network-manager-applet/g' "${adnrpi_nm_yamls[@]}"
 \t\t\telse
-\t\t\t\tdisplay_alert "Yumi: no network-manager-gnome reference in the rootfs yaml" "fixed upstream?" "wrn"
+\t\t\t\tdisplay_alert "ADNRPi: no network-manager-gnome reference in the rootfs yaml" "fixed upstream?" "wrn"
 \t\t\tfi
 \t\tfi
 '''

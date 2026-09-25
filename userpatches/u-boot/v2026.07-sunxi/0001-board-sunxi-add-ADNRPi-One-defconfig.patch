@@ -1,8 +1,8 @@
 From: ADN Robotics <adnroboticsfr@gmail.com>
-Subject: [PATCH] board: sunxi: add SmartPi One defconfig and device tree
+Subject: [PATCH] board: sunxi: add ADNRPi One defconfig and device tree
 Date: 2026-07-26
 
-Add defconfig and device tree for the ADNRPi SmartPi One board.
+Add defconfig and device tree for the ADNRPi ADNRPi One board.
 Based on nanopi_m1_defconfig (same Allwinner H3 SoC).
 
 DRAM tuned to 576 MHz with ZQ calibration and ODT enabled
@@ -10,17 +10,17 @@ for improved memory stability.
 
 The device tree reuses the NanoPi M1 one with custom model and
 compatible strings; U-Boot then advertises
-fdtfile=sun8i-h3-smartpi-one.dtb so the kernel boots with the
-matching SmartPi One device tree shipped by the kernel package.
+fdtfile=sun8i-h3-adnrpi-one.dtb so the kernel boots with the
+matching ADNRPi One device tree shipped by the kernel package.
 
 Signed-off-by: ADN Robotics <adnroboticsfr@gmail.com>
 ---
  arch/arm/dts/Makefile                 |  1 +
- arch/arm/dts/sun8i-h3-smartpi-one.dts | 13 +++++++++++++
- configs/smartpi1_defconfig            | 16 ++++++++++++++++
+ arch/arm/dts/sun8i-h3-adnrpi-one.dts | 13 +++++++++++++
+ configs/adnrpi1_defconfig            | 16 ++++++++++++++++
  3 files changed, 30 insertions(+)
- create mode 100644 arch/arm/dts/sun8i-h3-smartpi-one.dts
- create mode 100644 configs/smartpi1_defconfig
+ create mode 100644 arch/arm/dts/sun8i-h3-adnrpi-one.dts
+ create mode 100644 configs/adnrpi1_defconfig
 
 diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
 --- a/arch/arm/dts/Makefile
@@ -29,34 +29,34 @@ diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
  	sun8i-h3-orangepi-plus2e.dtb \
  	sun8i-h3-orangepi-zero-plus2.dtb \
  	sun8i-h3-rervision-dvk.dtb \
-+	sun8i-h3-smartpi-one.dtb \
++	sun8i-h3-adnrpi-one.dtb \
  	sun8i-h3-zeropi.dtb
-diff --git a/arch/arm/dts/sun8i-h3-smartpi-one.dts b/arch/arm/dts/sun8i-h3-smartpi-one.dts
+diff --git a/arch/arm/dts/sun8i-h3-adnrpi-one.dts b/arch/arm/dts/sun8i-h3-adnrpi-one.dts
 new file mode 100644
 --- /dev/null
-+++ b/arch/arm/dts/sun8i-h3-smartpi-one.dts
++++ b/arch/arm/dts/sun8i-h3-adnrpi-one.dts
 @@ -0,0 +1,13 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
 + * Copyright (C) 2026 ADN Robotics <adnroboticsfr@gmail.com>
 + *
-+ * Same hardware as the NanoPi M1, custom branding for ADNRPi SmartPi One.
++ * Same hardware as the NanoPi M1, custom branding for ADNRPi ADNRPi One.
 + */
 +
 +#include "sun8i-h3-nanopi-m1.dts"
 +
 +/ {
-+	model = "YUMi SmartPi One";
-+	compatible = "adnrobotics,smartpi-one", "allwinner,sun8i-h3";
++	model = "ADN Robotics ADNRPi One";
++	compatible = "adnrobotics,adnrpi-one", "allwinner,sun8i-h3";
 +};
-diff --git a/configs/smartpi1_defconfig b/configs/smartpi1_defconfig
+diff --git a/configs/adnrpi1_defconfig b/configs/adnrpi1_defconfig
 new file mode 100644
 --- /dev/null
-+++ b/configs/smartpi1_defconfig
++++ b/configs/adnrpi1_defconfig
 @@ -0,0 +1,16 @@
 +CONFIG_ARM=y
 +CONFIG_ARCH_SUNXI=y
-+CONFIG_DEFAULT_DEVICE_TREE="sun8i-h3-smartpi-one"
++CONFIG_DEFAULT_DEVICE_TREE="sun8i-h3-adnrpi-one"
 +CONFIG_DRAM_CLK=576
 +CONFIG_DRAM_ZQ=3881979
 +CONFIG_DRAM_ODT_EN=y
@@ -69,6 +69,6 @@ new file mode 100644
 +CONFIG_BMP_16BPP=y
 +CONFIG_BMP_24BPP=y
 +CONFIG_BMP_32BPP=y
-+CONFIG_SYS_BOARD="smartpi1"
++CONFIG_SYS_BOARD="adnrpi1"
 --
 2.43.0

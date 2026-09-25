@@ -33,8 +33,8 @@ Main() {
     # installFirstBootConfig
 
     case "${BOARD}" in
-        smartpi1)
-            installSmartpadDetection
+        adnrpi1)
+            installADNRPiPadDetection
             installUsbGadgetNet
             disableSimpledrm
             forceUniversalVideoMode
@@ -55,24 +55,24 @@ Main() {
     esac
 }
 
-installSmartpadDetection() {
-    # The SmartPad is a SmartPi One fitted with a 4.3" 800x480 HDMI touchscreen
+installADNRPiPadDetection() {
+    # The ADNRPi Pad is a ADNRPi One fitted with a 4.3" 800x480 HDMI touchscreen
     # mounted upside-down. Rotation is decided at runtime by detecting that
     # screen (resolution + touchscreen), so a single image works on both a
-    # bare SmartPi One (normal monitor) and a SmartPad.
-    echo "Install SmartPad screen detection + console rotation ..."
+    # bare ADNRPi One (normal monitor) and a ADNRPi Pad.
+    echo "Install ADNRPi Pad screen detection + console rotation ..."
 
-    cp -v /tmp/overlay/smartpad-detect.sh /usr/local/bin/smartpad-detect.sh
-    chmod 755 /usr/local/bin/smartpad-detect.sh
+    cp -v /tmp/overlay/adnrpipad-detect.sh /usr/local/bin/adnrpipad-detect.sh
+    chmod 755 /usr/local/bin/adnrpipad-detect.sh
 
-    cp -v /tmp/overlay/smartpad-console-rotate.sh /usr/local/bin/smartpad-console-rotate.sh
-    chmod 755 /usr/local/bin/smartpad-console-rotate.sh
+    cp -v /tmp/overlay/adnrpipad-console-rotate.sh /usr/local/bin/adnrpipad-console-rotate.sh
+    chmod 755 /usr/local/bin/adnrpipad-console-rotate.sh
 
-    cp -v /tmp/overlay/smartpad-console-rotate.service /etc/systemd/system/smartpad-console-rotate.service
-    chmod 644 /etc/systemd/system/smartpad-console-rotate.service
-    systemctl enable smartpad-console-rotate.service
+    cp -v /tmp/overlay/adnrpipad-console-rotate.service /etc/systemd/system/adnrpipad-console-rotate.service
+    chmod 644 /etc/systemd/system/adnrpipad-console-rotate.service
+    systemctl enable adnrpipad-console-rotate.service
 
-    echo "Install SmartPad screen detection + console rotation ... [DONE]"
+    echo "Install ADNRPi Pad screen detection + console rotation ... [DONE]"
 }
 
 disableSimpledrm() {
@@ -85,7 +85,7 @@ disableSimpledrm() {
     # updating the initramfs fails on this FAT boot partition (no symlinks), so
     # a modprobe.d rule may never reach early boot.
     echo "Disable simpledrm (conflicts with sun4i-drm) ..."
-    echo "blacklist simpledrm" > /etc/modprobe.d/smartpi-no-simpledrm.conf
+    echo "blacklist simpledrm" > /etc/modprobe.d/adnrpi-no-simpledrm.conf
     local bootcfg="/boot/armbianEnv.txt"
     if grep -q "^extraargs=" "${bootcfg}" 2>/dev/null; then
         sed -i "s|^extraargs=\(.*\)|extraargs=\1 module_blacklist=simpledrm|" "${bootcfg}"
@@ -103,7 +103,7 @@ forceUniversalVideoMode() {
     # picture on every screen — 4K UHD included, they all accept and upscale
     # 720p — and is the mode RetroMi already ships with for the same reason.
     # The forced mode lands FIRST in the DRM mode list, which is why
-    # smartpad-detect.sh scans the whole list instead of the first entry.
+    # adnrpipad-detect.sh scans the whole list instead of the first entry.
     echo "Force universal 720p video mode (4K screen compatibility) ..."
     local bootcfg="/boot/armbianEnv.txt"
     if grep -q "^extraargs=" "${bootcfg}" 2>/dev/null; then
@@ -121,14 +121,14 @@ installOverclockControl() {
     # boot hangs boards right after "Reached target Paths." (verified on
     # hardware; the same image boots with cpufreq disabled). Default is
     # now the stock table — max 1296 MHz, adaptive governor — and
-    # "smartpi-oc on" opts in to 1368 MHz at the ADNRPi-validated 1.40 V
+    # "adnrpi-oc on" opts in to 1368 MHz at the ADNRPi-validated 1.40 V
     # with the performance governor (no frequency hopping).
-    echo "Install overclock control (smartpi-oc) ..."
+    echo "Install overclock control (adnrpi-oc) ..."
     apt-get install -y --no-install-recommends device-tree-compiler
     mkdir -p /boot/overlay-user
     dtc -@ -I dts -O dtb -o /boot/overlay-user/opp1368.dtbo /tmp/overlay/opp1368.dts
-    cp -v /tmp/overlay/smartpi-oc /usr/local/bin/smartpi-oc
-    chmod 755 /usr/local/bin/smartpi-oc
+    cp -v /tmp/overlay/adnrpi-oc /usr/local/bin/adnrpi-oc
+    chmod 755 /usr/local/bin/adnrpi-oc
     echo "Install overclock control ... [DONE]"
 }
 
@@ -146,12 +146,12 @@ installUsbGadgetNet() {
 }
 
 installRotationScript() {
-    # Install xrandr-based rotation script (gated on SmartPad screen detection)
-    echo "Installing SmartPad rotation script ..."
+    # Install xrandr-based rotation script (gated on ADNRPi Pad screen detection)
+    echo "Installing ADNRPi Pad rotation script ..."
 
     # Install the rotation script
-    local scriptSrc="/tmp/overlay/smartpad-rotate.sh"
-    local scriptDest="/usr/local/bin/smartpad-rotate.sh"
+    local scriptSrc="/tmp/overlay/adnrpipad-rotate.sh"
+    local scriptDest="/usr/local/bin/adnrpipad-rotate.sh"
     if [[ -f "${scriptSrc}" ]]; then
         cp -v "${scriptSrc}" "${scriptDest}"
         chmod 755 "${scriptDest}"
@@ -159,8 +159,8 @@ installRotationScript() {
     fi
 
     # Install autostart desktop file
-    local desktopSrc="/tmp/overlay/smartpad-rotate.desktop"
-    local desktopDest="/etc/xdg/autostart/smartpad-rotate.desktop"
+    local desktopSrc="/tmp/overlay/adnrpipad-rotate.desktop"
+    local desktopDest="/etc/xdg/autostart/adnrpipad-rotate.desktop"
     if [[ -f "${desktopSrc}" ]]; then
         mkdir -p /etc/xdg/autostart
         cp -v "${desktopSrc}" "${desktopDest}"
@@ -169,16 +169,16 @@ installRotationScript() {
     fi
 
     # Also add to LightDM session setup for login screen rotation
-    local lightdmScript="/etc/lightdm/lightdm.conf.d/50-smartpad-rotate.conf"
+    local lightdmScript="/etc/lightdm/lightdm.conf.d/50-adnrpipad-rotate.conf"
     mkdir -p /etc/lightdm/lightdm.conf.d
     cat > "${lightdmScript}" << 'EOF'
 [Seat:*]
-display-setup-script=/usr/local/bin/smartpad-rotate.sh
+display-setup-script=/usr/local/bin/adnrpipad-rotate.sh
 EOF
     chmod 644 "${lightdmScript}"
     echo "LightDM rotation configured"
 
-    echo "SmartPad rotation script ... [DONE]"
+    echo "ADNRPi Pad rotation script ... [DONE]"
 }
 
 patchLightdm() {
@@ -200,8 +200,8 @@ patchOnboardAutostart() {
     echo "Patch Onboard Autostart file ..."
     if [[ -f "${conf}" ]]; then
         sed -i '/OnlyShowIn/s/^/# /' "${conf}"
-        # Start the on-screen keyboard only when the SmartPad touchscreen is present
-        sed -i 's|^Exec=.*|Exec=sh -c "/usr/local/bin/smartpad-detect.sh \&\& exec onboard"|' "${conf}"
+        # Start the on-screen keyboard only when the ADNRPi Pad touchscreen is present
+        sed -i 's|^Exec=.*|Exec=sh -c "/usr/local/bin/adnrpipad-detect.sh \&\& exec onboard"|' "${conf}"
     else
         echo "WARNING: ${conf} not found (is the onboard package installed?)"
     fi
@@ -235,11 +235,11 @@ installChromiumFlags() {
 }
 
 installFirstBootConfig() {
-    echo "Installing SmartPi first-boot configuration system ..."
+    echo "Installing ADNRPi first-boot configuration system ..."
 
     # Install the config template to /boot
-    local configSrc="/tmp/overlay/smartpi-config.txt"
-    local configDest="/boot/smartpi-config.txt"
+    local configSrc="/tmp/overlay/adnrpi-config.txt"
+    local configDest="/boot/adnrpi-config.txt"
     if [[ -f "${configSrc}" ]]; then
         cp -v "${configSrc}" "${configDest}"
         # Set default hostname in config based on board name
@@ -249,8 +249,8 @@ installFirstBootConfig() {
     fi
 
     # Install the first-boot script
-    local scriptSrc="/tmp/overlay/smartpi-firstboot.sh"
-    local scriptDest="/usr/local/bin/smartpi-firstboot.sh"
+    local scriptSrc="/tmp/overlay/adnrpi-firstboot.sh"
+    local scriptDest="/usr/local/bin/adnrpi-firstboot.sh"
     if [[ -f "${scriptSrc}" ]]; then
         cp -v "${scriptSrc}" "${scriptDest}"
         chmod 755 "${scriptDest}"
@@ -258,17 +258,17 @@ installFirstBootConfig() {
     fi
 
     # Install the systemd service
-    local serviceSrc="/tmp/overlay/smartpi-firstboot.service"
-    local serviceDest="/etc/systemd/system/smartpi-firstboot.service"
+    local serviceSrc="/tmp/overlay/adnrpi-firstboot.service"
+    local serviceDest="/etc/systemd/system/adnrpi-firstboot.service"
     if [[ -f "${serviceSrc}" ]]; then
         cp -v "${serviceSrc}" "${serviceDest}"
         chmod 644 "${serviceDest}"
         # Enable the service
-        systemctl enable smartpi-firstboot.service
+        systemctl enable adnrpi-firstboot.service
         echo "First-boot service installed and enabled"
     fi
 
-    echo "SmartPi first-boot configuration system ... [DONE]"
+    echo "ADNRPi first-boot configuration system ... [DONE]"
 }
 
 Main "$@"

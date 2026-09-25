@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
-Name=SmartPad Rotation
-Comment=Rotate display and touch for SmartPad
-Exec=/usr/local/bin/smartpad-rotate.sh
+Name=ADNRPi Pad Rotation
+Comment=Rotate display and touch for ADNRPi Pad
+Exec=/usr/local/bin/adnrpipad-rotate.sh
 Terminal=false
 Hidden=false
 X-GNOME-Autostart-enabled=true

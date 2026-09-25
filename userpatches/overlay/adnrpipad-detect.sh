@@ -1,15 +1,15 @@
 #!/bin/sh
-# SmartPad screen detection
-# The SmartPad built-in screen is a 4.3" HDMI 800x480 panel with a USB touchscreen.
+# ADNRPi Pad screen detection
+# The ADNRPi Pad built-in screen is a 4.3" HDMI 800x480 panel with a USB touchscreen.
 # A plain HDMI monitor never matches both criteria, so rotation is only applied
-# on a real SmartPad.
-# Exit 0 if the SmartPad screen is detected, 1 otherwise.
+# on a real ADNRPi Pad.
+# Exit 0 if the ADNRPi Pad screen is detected, 1 otherwise.
 #
-# Usage: smartpad-detect.sh              full check (resolution + touchscreen)
-#        smartpad-detect.sh --screen-only  resolution check only (instant, no
+# Usage: adnrpipad-detect.sh              full check (resolution + touchscreen)
+#        adnrpipad-detect.sh --screen-only  resolution check only (instant, no
 #                                          dependency on USB touch enumeration)
 
-SMARTPAD_RES="800x480"
+ADNRPIPAD_RES="800x480"
 
 has_touchscreen() {
     for dev in /dev/input/event*; do
@@ -20,7 +20,7 @@ has_touchscreen() {
     return 1
 }
 
-has_smartpad_resolution() {
+has_adnrpipad_resolution() {
     # 800x480 anywhere in the mode list of a connected DRM output. Not just the
     # first entry: the video= mode forced on the kernel command line (720p, for
     # 4K screen compatibility) is inserted at the head of the list, but the
@@ -29,7 +29,7 @@ has_smartpad_resolution() {
     for conn in /sys/class/drm/card*-*; do
         [ -f "${conn}/status" ] || continue
         [ "$(cat "${conn}/status")" = "connected" ] || continue
-        grep -q "^${SMARTPAD_RES}$" "${conn}/modes" 2>/dev/null && return 0
+        grep -q "^${ADNRPIPAD_RES}$" "${conn}/modes" 2>/dev/null && return 0
     done
     # Fallback when no DRM connector info is available: framebuffer size
     if [ -f /sys/class/graphics/fb0/virtual_size ]; then
@@ -39,7 +39,7 @@ has_smartpad_resolution() {
 }
 
 if [ "$1" = "--screen-only" ]; then
-    has_smartpad_resolution
+    has_adnrpipad_resolution
 else
-    has_touchscreen && has_smartpad_resolution
+    has_touchscreen && has_adnrpipad_resolution
 fi

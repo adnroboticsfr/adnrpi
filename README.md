@@ -1,6 +1,6 @@
 # adnrpi
 
-Custom Armbian image builder for the SmartPi One (Allwinner H3) by **ADN Robotics**.
+Custom Armbian image builder for the ADNRPi One (Allwinner H3) by **ADN Robotics**.
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![GitHub Issues](https://img.shields.io/github/issues/adnroboticsfr/adnrpi)](https://github.com/adnroboticsfr/adnrpi/issues)
@@ -9,7 +9,7 @@ Custom Armbian image builder for the SmartPi One (Allwinner H3) by **ADN Robotic
 
 ## What is this?
 
-`adnrpi` builds ready-to-flash Armbian images for the **SmartPi One** and **SmartPad** boards. It wraps the official Armbian build system with board-specific patches, kernel overlays, and automation scripts so you get a working image without manual configuration.
+`adnrpi` builds ready-to-flash Armbian images for the **ADNRPi One** and **ADNRPi Pad** boards. It wraps the official Armbian build system with board-specific patches, kernel overlays, and automation scripts so you get a working image without manual configuration.
 
 ---
 
@@ -17,10 +17,10 @@ Custom Armbian image builder for the SmartPi One (Allwinner H3) by **ADN Robotic
 
 | Board | SoC | RAM |
 |-------|-----|-----|
-| SmartPi One | Allwinner H3 quad-core | 1 GB |
-| SmartPad | Allwinner H3 quad-core | 1 GB + 4.3" touchscreen |
+| ADNRPi One | Allwinner H3 quad-core | 1 GB |
+| ADNRPi Pad | Allwinner H3 quad-core | 1 GB + 4.3" touchscreen |
 
-The SmartPad uses the same `smartpi1` images — the 800×480 screen and 180° rotation are detected and applied automatically at boot.
+The ADNRPi Pad uses the same `adnrpi1` images — the 800×480 screen and 180° rotation are detected and applied automatically at boot.
 
 ---
 
@@ -40,7 +40,7 @@ The SmartPad uses the same `smartpi1` images — the 800×480 screen and 180° r
 ## Key features
 
 - **Instant boot logo** — built into U-Boot, drawn the moment video initialises, before anything is read from the SD card
-- **Universal display support** — fixed at 1280×720@60, works on everything from the SmartPad panel to 4K monitors
+- **Universal display support** — fixed at 1280×720@60, works on everything from the ADNRPi Pad panel to 4K monitors
 - **H3 CPU overclock to 1368 MHz** — explicit opt-in, stress-tested at fixed voltage
 - **SSH over USB OTG** — one cable powers the board and provides a network interface (NCM gadget, works on Linux / Windows 11 / macOS)
 - **Kernel headers pre-installed** — build DKMS modules directly on the board
@@ -52,15 +52,15 @@ The SmartPad uses the same `smartpi1` images — the 800×480 screen and 180° r
 By default images run at stock **1296 MHz** with the adaptive governor.
 
 ```bash
-sudo smartpi-oc on      # enable 1368 MHz, then reboot
-sudo smartpi-oc off     # back to stock, then reboot
-sudo smartpi-oc status  # current state
+sudo adnrpi-oc on      # enable 1368 MHz, then reboot
+sudo adnrpi-oc off     # back to stock, then reboot
+sudo adnrpi-oc status  # current state
 ```
 
 After enabling, verify:
 
 ```bash
-sudo smartpi-oc status
+sudo adnrpi-oc status
 # overclock: on
 # current max: 1368000 kHz
 # governor:    performance
@@ -91,8 +91,8 @@ ADNRPi-{board}-{codename}-{distro_version}-{variant}-{timestamp}.img.xz
 ```
 
 Examples:
-- `ADNRPi-smartpi1-trixie-debian13-server-2026-01-01-1200.img.xz`
-- `ADNRPi-smartpi1-trixie-debian13-desktop_XFCE-2026-01-01-1200.img.xz`
+- `ADNRPi-adnrpi1-trixie-debian13-server-2026-01-01-1200.img.xz`
+- `ADNRPi-adnrpi1-trixie-debian13-desktop_XFCE-2026-01-01-1200.img.xz`
 
 ---
 
@@ -101,10 +101,10 @@ Examples:
 ```
 adnrpi/
 ├── boards/
-│   └── smartpi1.wip            # H3 board definition
+│   └── adnrpi1.wip            # H3 board definition
 ├── configs/
 │   ├── config-default.conf     # Default build settings
-│   └── smartpi1-*.conf         # Per-distro/variant configs
+│   └── adnrpi1-*.conf         # Per-distro/variant configs
 ├── docs/
 │   └── H3-OVERCLOCK.md
 ├── userpatches/
@@ -127,14 +127,14 @@ Requires a Debian/Ubuntu x86-64 host (or WSL2).
 git clone https://github.com/armbian/build.git
 cd build
 # Copy userpatches/ and configs/ from this repo into build/
-bash compile.sh BOARD=smartpi1 BRANCH=current RELEASE=trixie BUILD_DESKTOP=no
+bash compile.sh BOARD=adnrpi1 BRANCH=current RELEASE=trixie BUILD_DESKTOP=no
 ```
 
 ---
 
 ## Add a new distribution
 
-1. Create `configs/smartpi1-{codename}-{variant}.conf`
+1. Create `configs/adnrpi1-{codename}-{variant}.conf`
 2. Set at minimum: `BOARD`, `RELEASE`, `BUILD_DESKTOP`, `BRANCH`
 3. Push — the CI workflow picks it up automatically
 

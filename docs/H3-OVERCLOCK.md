@@ -1,8 +1,8 @@
-# H3 Overclock — SmartPi One
+# H3 Overclock — ADNRPi One
 
 ## TL;DR
 
-Le CPU H3 (AllWinner) du SmartPi One est limité à **1296 MHz** par défaut.
+Le CPU H3 (AllWinner) du ADNRPi One est limité à **1296 MHz** par défaut.
 Le patch kernel inclus active l'OPP **1368 MHz @ 1.40V**, qui est la fréquence
 max stable testée.
 

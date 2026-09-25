@@ -1,45 +1,45 @@
 From: ADN Robotics <adnroboticsfr@gmail.com>
-Subject: [PATCH] ARM: dts: sun8i-h3: add SmartPi One device tree
+Subject: [PATCH] ARM: dts: sun8i-h3: add ADNRPi One device tree
 Date: 2026-05-27
 
-Add device tree for the ADNRPi SmartPi One board.
+Add device tree for the ADNRPi ADNRPi One board.
 Same hardware as NanoPi M1 (Allwinner H3, 1GB RAM), with
 custom model and compatible strings.
 
 Signed-off-by: ADN Robotics <adnroboticsfr@gmail.com>
 ---
  arch/arm/boot/dts/allwinner/Makefile              |   2 +
- arch/arm/boot/dts/allwinner/sun8i-h3-smartpi-one.dts | 80 +++++++++++++++++
+ arch/arm/boot/dts/allwinner/sun8i-h3-adnrpi-one.dts | 80 +++++++++++++++++
  2 files changed, 82 insertions(+)
- create mode 100644 arch/arm/boot/dts/allwinner/sun8i-h3-smartpi-one.dts
+ create mode 100644 arch/arm/boot/dts/allwinner/sun8i-h3-adnrpi-one.dts
 
 diff --git a/arch/arm/boot/dts/allwinner/Makefile b/arch/arm/boot/dts/allwinner/Makefile
 --- a/arch/arm/boot/dts/allwinner/Makefile
 +++ b/arch/arm/boot/dts/allwinner/Makefile
 @@ -1,3 +1,5 @@
  # SPDX-License-Identifier: GPL-2.0
-+DTC_FLAGS_sun8i-h3-smartpi-one := -@
-+dtb-$(CONFIG_MACH_SUN8I) += sun8i-h3-smartpi-one.dtb
++DTC_FLAGS_sun8i-h3-adnrpi-one := -@
++dtb-$(CONFIG_MACH_SUN8I) += sun8i-h3-adnrpi-one.dtb
  dtb-$(CONFIG_MACH_SUN4I) += \
  	sun4i-a10-a1000.dtb \
-diff --git a/arch/arm/boot/dts/allwinner/sun8i-h3-smartpi-one.dts b/arch/arm/boot/dts/allwinner/sun8i-h3-smartpi-one.dts
+diff --git a/arch/arm/boot/dts/allwinner/sun8i-h3-adnrpi-one.dts b/arch/arm/boot/dts/allwinner/sun8i-h3-adnrpi-one.dts
 new file mode 100644
 --- /dev/null
-+++ b/arch/arm/boot/dts/allwinner/sun8i-h3-smartpi-one.dts
++++ b/arch/arm/boot/dts/allwinner/sun8i-h3-adnrpi-one.dts
 @@ -0,0 +1,79 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
 + * Copyright (C) 2026 ADN Robotics <adnroboticsfr@gmail.com>
 + *
 + * Based on sun8i-h3-nanopi-m1.dts by Milo Kim
-+ * Same hardware, custom branding for ADNRPi SmartPi One.
++ * Same hardware, custom branding for ADNRPi ADNRPi One.
 + */
 +
 +#include "sun8i-h3-nanopi.dtsi"
 +
 +/ {
-+	model = "YUMi SmartPi One";
-+	compatible = "adnrobotics,smartpi-one", "allwinner,sun8i-h3";
++	model = "ADN Robotics ADNRPi One";
++	compatible = "adnrobotics,adnrpi-one", "allwinner,sun8i-h3";
 +
 +	aliases {
 +		ethernet0 = &emac;

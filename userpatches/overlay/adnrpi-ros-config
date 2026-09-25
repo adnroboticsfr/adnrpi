@@ -1,0 +1,206 @@
+#!/bin/bash
+# adnrpi-ros-config — configure ROS environment on ADNRPi
+# Usage:
+#   adnrpi-ros-config show
+#   adnrpi-ros-config set <key> <value>
+#   adnrpi-ros-config interactive
+#   adnrpi-ros-config apply
+#   adnrpi-ros-config test
+
+CONF_FILE="/etc/ros/adnrpi-ros.conf"
+BASHRC_GLOBAL="/etc/bash.bashrc"
+ROS1_SETUP="/opt/ros/noetic/setup.bash"
+ROS2_SETUP="/opt/ros/humble/setup.bash"
+
+_has_ros1() { [[ -f "$ROS1_SETUP" ]]; }
+_has_ros2() { [[ -f "$ROS2_SETUP" ]]; }
+
+_read_conf() {
+    [[ -f "$CONF_FILE" ]] && grep -E "^$1=" "$CONF_FILE" | cut -d= -f2- | head -1
+}
+
+_write_conf() {
+    local key="$1" val="$2"
+    mkdir -p /etc/ros
+    if grep -q "^${key}=" "$CONF_FILE" 2>/dev/null; then
+        sed -i "s|^${key}=.*|${key}=${val}|" "$CONF_FILE"
+    else
+        echo "${key}=${val}" >> "$CONF_FILE"
+    fi
+}
+
+_delete_conf() {
+    [[ -f "$CONF_FILE" ]] && sed -i "/^$1=/d" "$CONF_FILE"
+}
+
+_apply() {
+    # Rebuild the ROS section in /etc/bash.bashrc
+    # Remove old block
+    sed -i '/# >>> adnrpi-ros >>>/,/# <<< adnrpi-ros <<</d' "$BASHRC_GLOBAL"
+
+    local block="# >>> adnrpi-ros >>>"
+
+    if _has_ros1; then
+        block+=$'\n'"source ${ROS1_SETUP}"
+        local v
+        v=$(_read_conf ROS_MASTER_URI);  [[ -n "$v" ]] && block+=$'\n'"export ROS_MASTER_URI=${v}"
+        v=$(_read_conf ROS_HOSTNAME);    [[ -n "$v" ]] && block+=$'\n'"export ROS_HOSTNAME=${v}"
+        v=$(_read_conf ROS_IP);          [[ -n "$v" ]] && block+=$'\n'"export ROS_IP=${v}"
+        v=$(_read_conf ROS_WORKSPACE);   [[ -n "$v" ]] && [[ -f "${v}/devel/setup.bash" ]] && \
+            block+=$'\n'"source ${v}/devel/setup.bash"
+    fi
+
+    if _has_ros2; then
+        block+=$'\n'"source ${ROS2_SETUP}"
+        local domain; domain=$(_read_conf ROS_DOMAIN_ID)
+        block+=$'\n'"export ROS_DOMAIN_ID=${domain:-0}"
+        local rmw; rmw=$(_read_conf ROS_RMW_IMPLEMENTATION)
+        block+=$'\n'"export RMW_IMPLEMENTATION=${rmw:-rmw_cyclonedds_cpp}"
+        local v
+        v=$(_read_conf ROS_WORKSPACE); [[ -n "$v" ]] && [[ -f "${v}/install/setup.bash" ]] && \
+            block+=$'\n'"source ${v}/install/setup.bash"
+    fi
+
+    local name; name=$(_read_conf ROS_ROBOT_NAME)
+    [[ -n "$name" ]] && block+=$'\n'"export ROS_ROBOT_NAME=${name}"
+
+    block+=$'\n'"# <<< adnrpi-ros <<<"
+    printf '%s\n' "$block" >> "$BASHRC_GLOBAL"
+    echo "Applied. Re-login or: source /etc/bash.bashrc"
+}
+
+_show() {
+    echo "=== ADNRPi ROS Configuration ==="
+    if _has_ros1; then echo "  ROS1 Noetic : installed"; else echo "  ROS1 Noetic : not installed"; fi
+    if _has_ros2; then echo "  ROS2 Humble : installed"; else echo "  ROS2 Humble : not installed"; fi
+    echo ""
+    echo "  Config file : $CONF_FILE"
+    if [[ -f "$CONF_FILE" ]]; then
+        echo ""
+        while IFS='=' read -r k v; do
+            [[ -z "$k" || "$k" == \#* ]] && continue
+            printf "  %-28s = %s\n" "$k" "$v"
+        done < "$CONF_FILE"
+    else
+        echo "  (no config yet)"
+    fi
+    echo ""
+    echo "  Current env:"
+    for var in ROS_MASTER_URI ROS_HOSTNAME ROS_IP ROS_DOMAIN_ID RMW_IMPLEMENTATION ROS_ROBOT_NAME; do
+        local val="${!var}"
+        [[ -n "$val" ]] && printf "  %-28s = %s\n" "$var" "$val"
+    done
+}
+
+_interactive() {
+    echo "=== ADNRPi ROS Configuration (interactive) ==="
+    echo "  Leave blank to keep current value. Type 'clear' to remove."
+    echo ""
+
+    _prompt() {
+        local key="$1" label="$2" current
+        current=$(_read_conf "$key")
+        read -rp "  ${label} [${current:-empty}]: " val
+        if [[ "$val" == "clear" ]]; then
+            _delete_conf "$key"
+        elif [[ -n "$val" ]]; then
+            _write_conf "$key" "$val"
+        fi
+    }
+
+    echo "-- Common --"
+    _prompt ROS_ROBOT_NAME       "Robot name (hostname/namespace)"
+    _prompt ROS_WORKSPACE        "ROS workspace path"
+
+    if _has_ros1; then
+        echo ""
+        echo "-- ROS1 Noetic --"
+        _prompt ROS_MASTER_URI   "ROS_MASTER_URI (e.g. http://192.168.1.10:11311)"
+        _prompt ROS_HOSTNAME     "ROS_HOSTNAME   (this machine's hostname on ROS net)"
+        _prompt ROS_IP           "ROS_IP         (this machine's IP, alt. to hostname)"
+    fi
+
+    if _has_ros2; then
+        echo ""
+        echo "-- ROS2 Humble --"
+        _prompt ROS_DOMAIN_ID           "ROS_DOMAIN_ID (0-232)"
+        _prompt ROS_RMW_IMPLEMENTATION  "RMW (rmw_cyclonedds_cpp / rmw_fastrtps_cpp)"
+    fi
+
+    echo ""
+    read -rp "Apply now? [Y/n]: " ans
+    [[ "${ans,,}" != "n" ]] && _apply
+}
+
+_test() {
+    echo "=== ROS connectivity test ==="
+    if _has_ros1; then
+        # shellcheck disable=SC1090
+        source "$ROS1_SETUP" 2>/dev/null
+        local master="${ROS_MASTER_URI:-http://localhost:11311}"
+        echo -n "  ROS1 master (${master}): "
+        if timeout 3 rostopic list &>/dev/null 2>&1; then
+            echo "OK"
+        else
+            echo "unreachable"
+        fi
+    fi
+    if _has_ros2; then
+        # shellcheck disable=SC1090
+        source "$ROS2_SETUP" 2>/dev/null
+        echo -n "  ROS2 nodes (domain ${ROS_DOMAIN_ID:-0}): "
+        local nodes; nodes=$(timeout 3 ros2 node list 2>/dev/null)
+        if [[ -n "$nodes" ]]; then
+            echo "OK — $nodes"
+        else
+            echo "no nodes found (normal if nothing is running)"
+        fi
+    fi
+}
+
+# ── dispatch ──────────────────────────────────────────────────────────────────
+case "${1:-interactive}" in
+    show)        _show ;;
+    set)
+        [[ $# -lt 3 ]] && { echo "Usage: adnrpi-ros-config set <KEY> <value>"; exit 1; }
+        _write_conf "$2" "$3"
+        _apply
+        ;;
+    unset|clear)
+        [[ $# -lt 2 ]] && { echo "Usage: adnrpi-ros-config unset <KEY>"; exit 1; }
+        _delete_conf "$2"
+        _apply
+        ;;
+    apply)       _apply ;;
+    test)        _test ;;
+    interactive) _interactive ;;
+    help|--help|-h)
+        cat <<'EOF'
+adnrpi-ros-config — ADNRPi ROS environment configurator
+
+Commands:
+  show                     show current configuration
+  interactive              interactive setup wizard (default)
+  set <KEY> <VALUE>        set a config key and apply
+  unset <KEY>              remove a config key and apply
+  apply                    rebuild /etc/bash.bashrc ROS block
+  test                     test ROS1 master / ROS2 node connectivity
+
+Keys:
+  ROS_ROBOT_NAME           robot name (hostname + namespace)
+  ROS_WORKSPACE            path to colcon/catkin workspace
+  ROS_MASTER_URI           ROS1 master URI
+  ROS_HOSTNAME             ROS1 hostname advertised on network
+  ROS_IP                   ROS1 IP advertised on network
+  ROS_DOMAIN_ID            ROS2 domain ID (0-232)
+  ROS_RMW_IMPLEMENTATION   ROS2 middleware
+
+Examples:
+  adnrpi-ros-config set ROS_MASTER_URI http://192.168.1.10:11311
+  adnrpi-ros-config set ROS_DOMAIN_ID 42
+  adnrpi-ros-config set ROS_ROBOT_NAME my_robot
+  adnrpi-ros-config test
+EOF
+        ;;
+    *) echo "Unknown command: $1. Try: adnrpi-ros-config help"; exit 1 ;;
+esac

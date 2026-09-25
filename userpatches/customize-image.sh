@@ -276,8 +276,12 @@ http://packages.ros.org/ros2/ubuntu jammy main" \
     rosdep init || true
     rosdep update || true
 
-    # Source ROS2 automatically for all users
-    echo "source /opt/ros/humble/setup.bash" >> /etc/bash.bashrc
+    # Install adnrpi-ros-config tool
+    cp -v /tmp/overlay/adnrpi-ros-config /usr/local/bin/adnrpi-ros-config
+    chmod 755 /usr/local/bin/adnrpi-ros-config
+    mkdir -p /etc/ros
+
+    # Source ROS2 at login via adnrpi-ros-config apply (first-boot will call it)
     echo "source /opt/ros/humble/setup.bash" >> /etc/skel/.bashrc
 
     echo "Installing ROS2 Humble ... [DONE]"
@@ -329,8 +333,11 @@ installROS1Noetic() {
     rosdep init || true
     rosdep update || true
 
-    # Source ROS1 automatically for all users
-    echo "source /opt/ros/noetic/setup.bash" >> /etc/bash.bashrc
+    # Install adnrpi-ros-config tool
+    cp -v /tmp/overlay/adnrpi-ros-config /usr/local/bin/adnrpi-ros-config
+    chmod 755 /usr/local/bin/adnrpi-ros-config
+    mkdir -p /etc/ros
+
     echo "source /opt/ros/noetic/setup.bash" >> /etc/skel/.bashrc
 
     echo "Installing ROS1 Noetic ... [DONE]"

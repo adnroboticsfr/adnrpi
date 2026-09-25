@@ -47,8 +47,17 @@ DNS=8.8.8.8
 # Examples: Europe/Paris, America/New_York, Asia/Tokyo
 TIMEZONE=Europe/Paris
 
-# ============ LOCALE ============
+# ============ LANGUAGE & LOCALE ============
+# Examples: en_US.UTF-8, fr_FR.UTF-8, de_DE.UTF-8
 LOCALE=en_US.UTF-8
+
+# ============ KEYBOARD ============
+# Layout examples: us, fr, de, es, gb, it
+KEYBOARD_LAYOUT=us
+# Variant examples: (empty), azerty, intl, nodeadkeys
+KEYBOARD_VARIANT=
+# Model: pc105 (standard 105-key), pc104 (US 104-key)
+KEYBOARD_MODEL=pc105
 
 # ============================================================
 # ROS CONFIGURATION (only applies to ROS images)

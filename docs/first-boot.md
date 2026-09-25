@@ -25,6 +25,8 @@ The following values are pre-filled out of the box:
 | `DNS` | `8.8.8.8` | DNS server (DHCP) |
 | `TIMEZONE` | `Europe/Paris` | Timezone |
 | `LOCALE` | `en_US.UTF-8` | System locale |
+| `KEYBOARD_LAYOUT` | `us` | Keyboard layout |
+| `KEYBOARD_MODEL` | `pc105` | Keyboard model |
 
 Change any value before setting `APPLY_CONFIG=1`.
 
@@ -61,7 +63,11 @@ ROOT_PASSWORD=adnrpi        # root password
 
 ```ini
 TIMEZONE=Europe/Paris       # timezone
-LOCALE=en_US.UTF-8          # locale
+LOCALE=en_US.UTF-8          # locale: en_US.UTF-8, fr_FR.UTF-8, de_DE.UTF-8...
+
+KEYBOARD_LAYOUT=us          # keyboard layout: us, fr, de, es, gb, it...
+KEYBOARD_VARIANT=           # variant: (empty), azerty, intl, nodeadkeys...
+KEYBOARD_MODEL=pc105        # model: pc105 (105-key), pc104 (US 104-key)
 ```
 
 ### ROS (ROS images only)

@@ -448,6 +448,25 @@ process_adnrpi_config() {
         update-locale LANG="$LOCALE" 2>/dev/null
     fi
 
+    # ============ KEYBOARD ============
+    if [[ -n "$KEYBOARD_LAYOUT" ]]; then
+        log "[ADNRPI] Setting keyboard layout: ${KEYBOARD_MODEL:-pc105} / ${KEYBOARD_LAYOUT} / ${KEYBOARD_VARIANT}"
+        cat > /etc/default/keyboard << EOF
+XKBMODEL="${KEYBOARD_MODEL:-pc105}"
+XKBLAYOUT="${KEYBOARD_LAYOUT}"
+XKBVARIANT="${KEYBOARD_VARIANT}"
+XKBOPTIONS=""
+BACKSPACE="guess"
+EOF
+        # Apply immediately without interactive prompt
+        if command -v setupcon &>/dev/null; then
+            setupcon --force 2>/dev/null || true
+        fi
+        if command -v udevadm &>/dev/null; then
+            udevadm trigger --subsystem-match=input --action=change 2>/dev/null || true
+        fi
+    fi
+
     # ============ WIFI ============
     if [[ -n "$WIFI_SSID" ]] && [[ -n "$WIFI_PASSWORD" ]]; then
         log "[ADNRPI] Configuring WiFi: $WIFI_SSID"

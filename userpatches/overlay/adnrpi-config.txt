@@ -1,97 +1,80 @@
 # ============================================================
 # ADNRPi Configuration File
 # ============================================================
-# This file is read from the FAT boot partition on first boot.
-# You can edit it on Windows/Mac/Linux before inserting the SD card.
+# Edit this file on the SD card (FAT partition) before first boot.
+# Works on Windows, macOS, and Linux — no special software needed.
 #
-# To apply custom settings:
-# 1. Edit the values below
-# 2. Change APPLY_CONFIG=0 to APPLY_CONFIG=1
-# 3. Save the file and boot your device
+# To apply:
+#   1. Edit the values below
+#   2. Set APPLY_CONFIG=1
+#   3. Save and boot
 #
-# After applying, this file will be renamed to .done
-#
-# RASPBERRY PI IMAGER COMPATIBILITY:
-# This system fully supports Raspberry Pi Imager configuration!
-# Just use the gear icon in Pi Imager to set hostname, WiFi, SSH, etc.
-#
-# Supported formats:
-# - Cloud-init style (new): user-data, network-*.con, cmdline.txt
-# - Legacy files: ssh, wpa_supplicant.conf, userconf.txt, hostname, firstrun.sh
+# After first boot this file is renamed to adnrpi-config.txt.done
 # ============================================================
 
 # SET TO 1 TO APPLY THIS CONFIGURATION
 APPLY_CONFIG=0
 
 # ============ HOSTNAME ============
-# Device hostname (shown on network)
-HOSTNAME=
+HOSTNAME=adnrpi
 
 # ============ SSH ============
-# SSH is enabled by default (1=enabled, 0=disabled)
+# 1 = enabled (default), 0 = disabled
 SSH_ENABLED=1
 
-# ============ FIRST USER ============
-# Create a user account (optional, leave empty to skip)
-USERNAME=
-USER_PASSWORD=
-
 # ============ ROOT PASSWORD ============
-# Set root password (optional, leave empty to keep default)
-ROOT_PASSWORD=
+ROOT_PASSWORD=adnrpi
+
+# ============ USER ============
+# User 'pi' is created automatically with sudo access
+USERNAME=pi
+USER_PASSWORD=adnrpi
 
 # ============ WIFI ============
-# Configure WiFi connection
+# Leave empty to skip WiFi configuration
 WIFI_SSID=
 WIFI_PASSWORD=
 WIFI_COUNTRY=FR
 
 # ============ NETWORK ============
 # Leave empty for DHCP (automatic IP)
-# For static IP, fill in all fields below
 STATIC_IP=
 NETMASK=255.255.255.0
 GATEWAY=
-DNS=
+DNS=8.8.8.8
 
 # ============ TIMEZONE ============
 # Examples: Europe/Paris, America/New_York, Asia/Tokyo
-# Full list: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
-TIMEZONE=
+TIMEZONE=Europe/Paris
 
 # ============ LOCALE ============
-# Examples: fr_FR.UTF-8, en_US.UTF-8, de_DE.UTF-8
-LOCALE=
+LOCALE=en_US.UTF-8
 
 # ============================================================
 # ROS CONFIGURATION (only applies to ROS images)
 # ============================================================
 
-# ============ ROS COMMON ============
-# Name of the robot (used for namespace and hostname if HOSTNAME is empty)
+# Robot name (used for ROS namespace — leave empty to use HOSTNAME)
 ROS_ROBOT_NAME=
 
-# Path to a ROS workspace to source automatically (leave empty to skip)
+# ROS workspace to source automatically on login
 # Example: /home/pi/ros_ws
 ROS_WORKSPACE=
 
-# ============ ROS1 (Noetic) ============
-# URI of the ROS master node
-# Default: http://localhost:11311
+# ---- ROS1 Noetic ----
+# URI of the ROS master node (default: http://localhost:11311)
 ROS_MASTER_URI=
 
-# Hostname or IP this machine advertises to the ROS network
-# Leave empty to use the system hostname
+# Hostname or IP advertised to the ROS1 network (leave empty = system hostname)
 ROS_HOSTNAME=
 
-# IP this machine advertises (alternative to ROS_HOSTNAME)
+# IP advertised to the ROS1 network (alternative to ROS_HOSTNAME)
 ROS_IP=
 
-# ============ ROS2 (Humble) ============
-# ROS2 Domain ID (0-232, isolates ROS2 networks on the same subnet)
-# Default: 0
+# ---- ROS2 Humble ----
+# Domain ID for network isolation (0–232, default: 0)
 ROS_DOMAIN_ID=
 
-# ROS2 middleware (leave empty for default cyclonedds)
+# DDS middleware (leave empty for default cyclonedds)
 # Options: rmw_cyclonedds_cpp, rmw_fastrtps_cpp
 ROS_RMW_IMPLEMENTATION=

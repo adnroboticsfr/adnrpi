@@ -4,24 +4,42 @@
 
 ## Enable configuration
 
-By default `APPLY_CONFIG=0` — nothing is applied. To activate:
+The file ships with `APPLY_CONFIG=0` — nothing is applied until you opt in. To activate, simply change it to `1`:
 
 ```ini
 APPLY_CONFIG=1
 ```
 
-## Available options
+## Default values (pre-filled)
+
+The following values are pre-filled out of the box:
+
+| Key | Default | Description |
+| --- | --- | --- |
+| `HOSTNAME` | `adnrpi` | Network hostname |
+| `ROOT_PASSWORD` | `adnrpi` | Root account password |
+| `USERNAME` | `pi` | User created on first boot |
+| `USER_PASSWORD` | `adnrpi` | Password for the `pi` user |
+| `SSH_ENABLED` | `1` | SSH enabled |
+| `WIFI_COUNTRY` | `FR` | WiFi regulatory domain |
+| `DNS` | `8.8.8.8` | DNS server (DHCP) |
+| `TIMEZONE` | `Europe/Paris` | Timezone |
+| `LOCALE` | `en_US.UTF-8` | System locale |
+
+Change any value before setting `APPLY_CONFIG=1`.
+
+## All available options
 
 ### Network
 
 ```ini
-HOSTNAME=my-robot           # machine hostname on the network
+HOSTNAME=adnrpi             # machine hostname on the network
 
-WIFI_SSID=MyNetwork         # WiFi network name
+WIFI_SSID=MyNetwork         # WiFi network name (leave empty to skip)
 WIFI_PASSWORD=mypassword    # WiFi password
 WIFI_COUNTRY=FR             # country code (FR, US, DE, GB...)
 
-# Static IP (leave empty for DHCP)
+# Static IP (leave all empty for DHCP)
 STATIC_IP=192.168.1.50
 NETMASK=255.255.255.0
 GATEWAY=192.168.1.1
@@ -33,10 +51,10 @@ DNS=8.8.8.8
 ```ini
 SSH_ENABLED=1               # 1 = enabled (default), 0 = disabled
 
-USERNAME=pi                 # create a user account
-USER_PASSWORD=mypassword
+USERNAME=pi                 # user to create (gets sudo access)
+USER_PASSWORD=adnrpi        # password for that user
 
-ROOT_PASSWORD=newrootpassword
+ROOT_PASSWORD=adnrpi        # root password
 ```
 
 ### System

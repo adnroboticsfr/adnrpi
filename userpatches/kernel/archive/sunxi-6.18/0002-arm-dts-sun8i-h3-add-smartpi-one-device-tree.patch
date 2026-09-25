@@ -1,12 +1,12 @@
-From: Nicolas Michaut <nicolas@yumilab.com>
+From: ADN Robotics <adnroboticsfr@gmail.com>
 Subject: [PATCH] ARM: dts: sun8i-h3: add SmartPi One device tree
 Date: 2026-05-27
 
-Add device tree for the Yumi Lab SmartPi One board.
+Add device tree for the ADNRPi SmartPi One board.
 Same hardware as NanoPi M1 (Allwinner H3, 1GB RAM), with
 custom model and compatible strings.
 
-Signed-off-by: Nicolas Michaut <nicolas@yumilab.com>
+Signed-off-by: ADN Robotics <adnroboticsfr@gmail.com>
 ---
  arch/arm/boot/dts/allwinner/Makefile              |   2 +
  arch/arm/boot/dts/allwinner/sun8i-h3-smartpi-one.dts | 80 +++++++++++++++++
@@ -29,17 +29,17 @@ new file mode 100644
 @@ -0,0 +1,79 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
-+ * Copyright (C) 2026 Yumi Lab <nicolas@yumilab.com>
++ * Copyright (C) 2026 ADN Robotics <adnroboticsfr@gmail.com>
 + *
 + * Based on sun8i-h3-nanopi-m1.dts by Milo Kim
-+ * Same hardware, custom branding for Yumi SmartPi One.
++ * Same hardware, custom branding for ADNRPi SmartPi One.
 + */
 +
 +#include "sun8i-h3-nanopi.dtsi"
 +
 +/ {
 +	model = "YUMi SmartPi One";
-+	compatible = "yumi,smartpi-one", "allwinner,sun8i-h3";
++	compatible = "adnrobotics,smartpi-one", "allwinner,sun8i-h3";
 +
 +	aliases {
 +		ethernet0 = &emac;

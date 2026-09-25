@@ -51,11 +51,11 @@ block = '''\t\t# Yumi: Debian 14 renamed network-manager-gnome to network-manage
 \t\t# but the armbian-config package still lists the old name in its desktop
 \t\t# package lists. Rename it in the copy that lives in the rootfs.
 \t\tif [[ "${RELEASE}" == "forky" ]]; then
-\t\t\tdeclare -a yumi_nm_yamls=()
-\t\t\tmapfile -t yumi_nm_yamls < <(grep -rl network-manager-gnome "${SDCARD}/usr/share" --include='*.yaml' 2> /dev/null || true)
-\t\t\tif [[ ${#yumi_nm_yamls[@]} -gt 0 ]]; then
-\t\t\t\tdisplay_alert "Yumi: renaming the NM applet package in desktop lists" "${#yumi_nm_yamls[@]} file(s)" "info"
-\t\t\t\trun_host_command_logged sed -i 's/network-manager-gnome/network-manager-applet/g' "${yumi_nm_yamls[@]}"
+\t\t\tdeclare -a adnrpi_nm_yamls=()
+\t\t\tmapfile -t adnrpi_nm_yamls < <(grep -rl network-manager-gnome "${SDCARD}/usr/share" --include='*.yaml' 2> /dev/null || true)
+\t\t\tif [[ ${#adnrpi_nm_yamls[@]} -gt 0 ]]; then
+\t\t\t\tdisplay_alert "ADNRPi: renaming the NM applet package in desktop lists" "${#adnrpi_nm_yamls[@]} file(s)" "info"
+\t\t\t\trun_host_command_logged sed -i 's/network-manager-gnome/network-manager-applet/g' "${adnrpi_nm_yamls[@]}"
 \t\t\telse
 \t\t\t\tdisplay_alert "Yumi: no network-manager-gnome reference in the rootfs yaml" "fixed upstream?" "wrn"
 \t\t\tfi

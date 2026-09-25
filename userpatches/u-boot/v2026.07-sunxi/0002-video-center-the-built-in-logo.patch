@@ -1,4 +1,4 @@
-From: Nicolas Michaut <nicolas@yumilab.com>
+From: ADN Robotics <adnroboticsfr@gmail.com>
 Subject: [PATCH] video: center the built-in boot logo
 Date: 2026-07-27
 
@@ -6,7 +6,7 @@ The built-in logo (CONFIG_VIDEO_LOGO) is hardcoded to the top-right
 corner of the screen. Draw it centered instead: video_bmp_display()
 already knows how to center a bitmap when passed BMP_ALIGN_CENTER.
 
-Signed-off-by: Nicolas Michaut <nicolas@yumilab.com>
+Signed-off-by: ADN Robotics <adnroboticsfr@gmail.com>
 ---
  drivers/video/video-uclass.c | 4 +++-
  1 file changed, 3 insertions(+), 1 deletion(-)

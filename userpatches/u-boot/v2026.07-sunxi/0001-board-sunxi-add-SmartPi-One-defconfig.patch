@@ -1,8 +1,8 @@
-From: Nicolas Michaut <nicolas@yumilab.com>
+From: ADN Robotics <adnroboticsfr@gmail.com>
 Subject: [PATCH] board: sunxi: add SmartPi One defconfig and device tree
 Date: 2026-07-26
 
-Add defconfig and device tree for the Yumi Lab SmartPi One board.
+Add defconfig and device tree for the ADNRPi SmartPi One board.
 Based on nanopi_m1_defconfig (same Allwinner H3 SoC).
 
 DRAM tuned to 576 MHz with ZQ calibration and ODT enabled
@@ -13,7 +13,7 @@ compatible strings; U-Boot then advertises
 fdtfile=sun8i-h3-smartpi-one.dtb so the kernel boots with the
 matching SmartPi One device tree shipped by the kernel package.
 
-Signed-off-by: Nicolas Michaut <nicolas@yumilab.com>
+Signed-off-by: ADN Robotics <adnroboticsfr@gmail.com>
 ---
  arch/arm/dts/Makefile                 |  1 +
  arch/arm/dts/sun8i-h3-smartpi-one.dts | 13 +++++++++++++
@@ -38,16 +38,16 @@ new file mode 100644
 @@ -0,0 +1,13 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
-+ * Copyright (C) 2026 Yumi Lab <nicolas@yumilab.com>
++ * Copyright (C) 2026 ADN Robotics <adnroboticsfr@gmail.com>
 + *
-+ * Same hardware as the NanoPi M1, custom branding for Yumi SmartPi One.
++ * Same hardware as the NanoPi M1, custom branding for ADNRPi SmartPi One.
 + */
 +
 +#include "sun8i-h3-nanopi-m1.dts"
 +
 +/ {
 +	model = "YUMi SmartPi One";
-+	compatible = "yumi,smartpi-one", "allwinner,sun8i-h3";
++	compatible = "adnrobotics,smartpi-one", "allwinner,sun8i-h3";
 +};
 diff --git a/configs/smartpi1_defconfig b/configs/smartpi1_defconfig
 new file mode 100644

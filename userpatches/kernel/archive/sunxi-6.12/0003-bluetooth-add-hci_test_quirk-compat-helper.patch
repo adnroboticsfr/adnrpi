@@ -1,4 +1,4 @@
-From: Nicolas Michaut <nicolas@yumilab.com>
+From: ADN Robotics <adnroboticsfr@gmail.com>
 Subject: [PATCH] Bluetooth: hci_sync: add hci_test_quirk compat helper for 6.12
 Date: 2026-07-27
 
@@ -11,7 +11,7 @@ identically (quirks are a bitmap in hdev->quirks on this kernel).
 Harmless if Armbian fixes or drops their patch: an unused static
 inline generates no warning.
 
-Signed-off-by: Nicolas Michaut <nicolas@yumilab.com>
+Signed-off-by: ADN Robotics <adnroboticsfr@gmail.com>
 ---
  net/bluetooth/hci_sync.c | 8 ++++++++
  1 file changed, 8 insertions(+)

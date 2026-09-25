@@ -1,4 +1,4 @@
-From: Nicolas Michaut <nicolas@yumilab.com>
+From: ADN Robotics <adnroboticsfr@gmail.com>
 Subject: [PATCH] clk: sunxi-ng: h3: restore CPU PLL gating and reparenting notifiers
 Date: 2026-07-28
 
@@ -14,7 +14,7 @@ SmartPi One freezes right after "Reached target Paths." without this.
 Applied after the megous patchset, this restores the mainline
 notifiers on the legacy kernel.
 
-Signed-off-by: Nicolas Michaut <nicolas@yumilab.com>
+Signed-off-by: ADN Robotics <adnroboticsfr@gmail.com>
 ---
  drivers/clk/sunxi-ng/ccu-sun8i-h3.c | 22 ++++++++++++++++++++++
  1 file changed, 22 insertions(+)

@@ -121,7 +121,7 @@ installOverclockControl() {
     # boot hangs boards right after "Reached target Paths." (verified on
     # hardware; the same image boots with cpufreq disabled). Default is
     # now the stock table — max 1296 MHz, adaptive governor — and
-    # "smartpi-oc on" opts in to 1368 MHz at the Yumi-validated 1.40 V
+    # "smartpi-oc on" opts in to 1368 MHz at the ADNRPi-validated 1.40 V
     # with the performance governor (no frequency hopping).
     echo "Install overclock control (smartpi-oc) ..."
     apt-get install -y --no-install-recommends device-tree-compiler
@@ -229,7 +229,7 @@ installChromiumFlags() {
     # chromium renders fine and keeps its stock configuration.
     echo "Install Chromium software-GL environment ..."
     mkdir -p /etc/chromium.d
-    cp -v /tmp/overlay/yumi-mali-softgl /etc/chromium.d/yumi-mali-softgl
+    cp -v /tmp/overlay/adnrpi-mali-softgl /etc/chromium.d/adnrpi-mali-softgl
     rm -f /etc/chromium.d/armbian-flags
     echo "Install Chromium software-GL environment ... [DONE]"
 }

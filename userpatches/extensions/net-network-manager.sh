@@ -1,5 +1,5 @@
 #
-# Yumi override of armbian/build extensions/network/net-network-manager.sh
+# ADNRPi override of armbian/build extensions/network/net-network-manager.sh
 # (userpatches/extensions is searched before the built-in extensions).
 # Single change: Debian 14 (forky) renamed the NetworkManager applet
 # package network-manager-gnome to network-manager-applet, which made

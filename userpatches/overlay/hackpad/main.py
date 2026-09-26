@@ -11,7 +11,6 @@ import sys
 if "DISPLAY" not in os.environ and "WAYLAND_DISPLAY" not in os.environ:
     os.environ.setdefault("KIVY_WINDOW", "sdl2")
     os.environ.setdefault("SDL_VIDEODRIVER", "kmsdrm")
-    os.environ.setdefault("SDL_RENDERDRIVER", "opengles2")
     os.environ.setdefault("KIVY_GL_BACKEND", "sdl2")
 
 from kivy.config import Config

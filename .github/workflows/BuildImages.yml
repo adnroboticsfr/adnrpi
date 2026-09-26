@@ -30,7 +30,7 @@ concurrency:
 jobs:
   setup:
     name: Create Matrix
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       configfiles: ${{ steps.set-matrix.outputs.configfiles }}
       time: ${{ steps.time.outputs.time }}
@@ -53,7 +53,7 @@ jobs:
 
   build:
     name: Build ${{ matrix.configfile }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [setup]
     strategy:
       fail-fast: false

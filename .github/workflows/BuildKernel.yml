@@ -16,7 +16,7 @@ on:
 jobs:
   build:
     name: Build ${{ github.event.inputs.branch }} kernel for adnrpi1
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
       - name: Checkout Repository

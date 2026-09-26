@@ -479,10 +479,11 @@ installHackPad() {
     # Kivy + XFCE dependencies
     # python3-kivymd is NOT in Debian repos — omitted intentionally (not used by HackPad)
     # libsdl2-*-dev are build-time headers — not needed at runtime
+    # libgbm1 + libegl-mesa0 are required for SDL2 KMS/DRM backend (Lima GPU on H3)
     apt-get install -y --no-install-recommends \
         python3-kivy \
         libsdl2-2.0-0 libsdl2-image-2.0-0 libsdl2-mixer-2.0-0 libsdl2-ttf-2.0-0 \
-        libgles2 \
+        libgles2 libgbm1 libegl-mesa0 libdrm2 \
         xfce4 xfce4-terminal lightdm \
         fonts-dejavu-core
 

@@ -48,7 +48,12 @@ Main() {
                 esac
             fi
             case "${ADNRPI_ROS}" in
-                ros2) installROS2Humble ;;
+                ros2)
+                    case "${RELEASE}" in
+                        noble) installROS2Jazzy ;;
+                        *)     installROS2Humble ;;
+                    esac
+                    ;;
                 ros1) installROS1Noetic ;;
             esac
             ;;
@@ -62,6 +67,10 @@ installADNRPiPadDetection() {
     # bare ADNRPi One (normal monitor) and a ADNRPi Pad.
     echo "Install ADNRPi Pad screen detection + console rotation ..."
 
+    # kbd provides setfont; console-setup-linux provides Terminus and other
+    # large PSF fonts used by adnrpipad-console-rotate.sh for the 4.3" panel.
+    apt-get install -y --no-install-recommends kbd console-setup-linux
+
     cp -v /tmp/overlay/adnrpipad-detect.sh /usr/local/bin/adnrpipad-detect.sh
     chmod 755 /usr/local/bin/adnrpipad-detect.sh
 
@@ -71,6 +80,10 @@ installADNRPiPadDetection() {
     cp -v /tmp/overlay/adnrpipad-console-rotate.service /etc/systemd/system/adnrpipad-console-rotate.service
     chmod 644 /etc/systemd/system/adnrpipad-console-rotate.service
     systemctl enable adnrpipad-console-rotate.service
+
+    # Re-apply large font at each TTY login when pad is connected
+    cp -v /tmp/overlay/adnrpi-pad-font.sh /etc/profile.d/adnrpi-pad-font.sh
+    chmod 644 /etc/profile.d/adnrpi-pad-font.sh
 
     echo "Install ADNRPi Pad screen detection + console rotation ... [DONE]"
 }
@@ -100,11 +113,10 @@ forceUniversalVideoMode() {
     # The H3 tops out at 4K@30 (HDMI 1.4): letting the kernel negotiate with a
     # 4K UHD screen ends badly (unsupported 4K@60 preferred mode, or a 4K@30
     # framebuffer the Mali-400 cannot drive). Forcing 1280x720@60 guarantees a
-    # picture on every screen — 4K UHD included, they all accept and upscale
-    # 720p — and is the mode RetroMi already ships with for the same reason.
-    # The forced mode lands FIRST in the DRM mode list, which is why
-    # adnrpipad-detect.sh scans the whole list instead of the first entry.
-    echo "Force universal 720p video mode (4K screen compatibility) ..."
+    # picture on every HDMI screen at boot.
+    # adnrpipad-console-rotate.service then switches to 800x480 at runtime when
+    # the ADNRPi Pad is detected, without needing a reboot.
+    echo "Force 720p video mode (safe default for all HDMI screens) ..."
     local bootcfg="/boot/armbianEnv.txt"
     if grep -q "^extraargs=" "${bootcfg}" 2>/dev/null; then
         sed -i "s|^extraargs=\(.*\)|extraargs=\1 video=HDMI-A-1:1280x720@60|" "${bootcfg}"
@@ -112,7 +124,7 @@ forceUniversalVideoMode() {
         echo "extraargs=video=HDMI-A-1:1280x720@60" >> "${bootcfg}"
     fi
     grep "^extraargs=" "${bootcfg}"
-    echo "Force universal 720p video mode ... [DONE]"
+    echo "Force 720p video mode ... [DONE]"
 }
 
 installOverclockControl() {
@@ -234,65 +246,65 @@ installChromiumFlags() {
     echo "Install Chromium software-GL environment ... [DONE]"
 }
 
-installROS2Humble() {
-    echo "Installing ROS2 Humble (armhf) ..."
+installROS2() {
+    local distro="$1"    # humble or jazzy
+    local release="$2"   # jammy or noble
+    echo "Installing ROS2 ${distro^} (armhf, Ubuntu ${release}) ..."
     apt-get install -y curl gnupg lsb-release
 
     curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc \
         | gpg --dearmor -o /usr/share/keyrings/ros-archive-keyring.gpg
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \
-http://packages.ros.org/ros2/ubuntu jammy main" \
+http://packages.ros.org/ros2/ubuntu ${release} main" \
         > /etc/apt/sources.list.d/ros2.list
 
     apt-get update
 
-    # ros-base: core middleware (rcl, rclpy, rclcpp, topics, services, actions)
     apt-get install -y \
-        ros-humble-ros-base \
+        "ros-${distro}-ros-base" \
         python3-colcon-common-extensions \
         python3-rosdep \
         python3-argcomplete \
-        ros-humble-rmw-cyclonedds-cpp \
-        ros-humble-diagnostic-updater \
-        ros-humble-tf2 \
-        ros-humble-tf2-ros \
-        ros-humble-tf2-tools \
-        ros-humble-geometry-msgs \
-        ros-humble-sensor-msgs \
-        ros-humble-nav-msgs \
-        ros-humble-std-msgs \
-        ros-humble-std-srvs \
-        ros-humble-image-transport \
-        ros-humble-compressed-image-transport \
-        ros-humble-joy \
-        ros-humble-teleop-twist-joy \
-        ros-humble-teleop-twist-keyboard \
-        ros-humble-serial-driver \
-        ros-humble-rosbridge-suite \
-        ros-humble-robot-state-publisher \
-        ros-humble-joint-state-publisher \
-        ros-humble-xacro || true
+        "ros-${distro}-rmw-cyclonedds-cpp" \
+        "ros-${distro}-diagnostic-updater" \
+        "ros-${distro}-tf2" \
+        "ros-${distro}-tf2-ros" \
+        "ros-${distro}-tf2-tools" \
+        "ros-${distro}-geometry-msgs" \
+        "ros-${distro}-sensor-msgs" \
+        "ros-${distro}-nav-msgs" \
+        "ros-${distro}-std-msgs" \
+        "ros-${distro}-std-srvs" \
+        "ros-${distro}-image-transport" \
+        "ros-${distro}-compressed-image-transport" \
+        "ros-${distro}-joy" \
+        "ros-${distro}-teleop-twist-joy" \
+        "ros-${distro}-teleop-twist-keyboard" \
+        "ros-${distro}-serial-driver" \
+        "ros-${distro}-rosbridge-suite" \
+        "ros-${distro}-robot-state-publisher" \
+        "ros-${distro}-joint-state-publisher" \
+        "ros-${distro}-xacro" || true
 
     rosdep init || true
     rosdep update || true
 
-    # Install adnrpi-ros-config tool
     cp -v /tmp/overlay/adnrpi-ros-config /usr/local/bin/adnrpi-ros-config
     chmod 755 /usr/local/bin/adnrpi-ros-config
     mkdir -p /etc/ros
 
-    # Source ROS2 at login via adnrpi-ros-config apply (first-boot will call it)
-    echo "source /opt/ros/humble/setup.bash" >> /etc/skel/.bashrc
+    echo "source /opt/ros/${distro}/setup.bash" >> /etc/skel/.bashrc
 
-    echo "Installing ROS2 Humble ... [DONE]"
+    echo "Installing ROS2 ${distro^} ... [DONE]"
 }
 
+installROS2Humble() { installROS2 "humble" "jammy"; }
+installROS2Jazzy()  { installROS2 "jazzy"  "noble"; }
+
 installROS1Noetic() {
-    echo "Installing ROS1 Noetic (armhf via focal repo on jammy) ..."
+    echo "Installing ROS1 Noetic (armhf, Ubuntu focal) ..."
     apt-get install -y curl gnupg lsb-release
 
-    # ROS1 Noetic: official packages target Ubuntu Focal (20.04).
-    # Using focal repo on Jammy — works for ros-base + common packages.
     curl -sSL 'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0xC1CF6E31E6BADE8868B172B4F42ED6FBAB17C654' \
         | apt-key add -
     echo "deb http://packages.ros.org/ros/ubuntu focal main" \
@@ -394,6 +406,14 @@ installFirstBootConfig() {
         chmod 644 "${profileDest}"
         echo "Setup profile trigger installed to ${profileDest}"
     fi
+
+    # Disable Armbian's built-in first-run wizard.
+    # It asks for the same things (root password, user, locale, timezone) as
+    # adnrpi-setup, so running both would confuse the user.
+    # Removing the flag file is enough — the profile.d script checks for it
+    # before launching the wizard.
+    rm -f /root/.not_logged_in_yet
+    chmod -x /etc/profile.d/armbian-check-first-run.sh 2>/dev/null || true
 
     echo "ADNRPi first-boot configuration system ... [DONE]"
 }

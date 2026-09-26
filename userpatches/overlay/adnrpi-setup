@@ -82,7 +82,7 @@ setup_needed() {
 # ── Load existing values ──────────────────────────────────────────────────────
 
 load_current() {
-    # Defaults
+    # Hard-coded defaults (lowest priority)
     CUR_HOSTNAME="adnrpi"
     CUR_TIMEZONE="Europe/Paris"
     CUR_LOCALE="en_US.UTF-8"
@@ -95,7 +95,24 @@ load_current() {
     CUR_WIFI_PASSWORD=""
     CUR_WIFI_COUNTRY="FR"
 
-    # Override with saved setup values
+    # Boot config: initial defaults the user may have pre-filled (medium priority)
+    # Only used when setup.conf does not yet exist (first run).
+    if [[ ! -f "${SETUP_CONF}" ]] && [[ -f "${CONFIG_FILE}" ]]; then
+        # shellcheck disable=SC1090
+        source "${CONFIG_FILE}" 2>/dev/null || true
+        [[ -n "${HOSTNAME}" ]]          && CUR_HOSTNAME="${HOSTNAME}"
+        [[ -n "${TIMEZONE}" ]]          && CUR_TIMEZONE="${TIMEZONE}"
+        [[ -n "${LOCALE}" ]]            && CUR_LOCALE="${LOCALE}"
+        [[ -n "${KEYBOARD_LAYOUT}" ]]   && CUR_KEYBOARD_LAYOUT="${KEYBOARD_LAYOUT}"
+        [[ -n "${KEYBOARD_VARIANT}" ]]  && CUR_KEYBOARD_VARIANT="${KEYBOARD_VARIANT}"
+        [[ -n "${ROOT_PASSWORD}" ]]     && CUR_ROOT_PASSWORD="${ROOT_PASSWORD}"
+        [[ -n "${USERNAME}" ]]          && CUR_USERNAME="${USERNAME}"
+        [[ -n "${USER_PASSWORD}" ]]     && CUR_USER_PASSWORD="${USER_PASSWORD}"
+        [[ -n "${WIFI_SSID}" ]]         && CUR_WIFI_SSID="${WIFI_SSID}"
+        [[ -n "${WIFI_COUNTRY}" ]]      && CUR_WIFI_COUNTRY="${WIFI_COUNTRY}"
+    fi
+
+    # Saved setup state: wins over everything (highest priority)
     if [[ -f "${SETUP_CONF}" ]]; then
         # shellcheck disable=SC1090
         source "${SETUP_CONF}" 2>/dev/null || true
@@ -109,22 +126,6 @@ load_current() {
         CUR_USER_PASSWORD="${SAVED_USER_PASSWORD:-$CUR_USER_PASSWORD}"
         CUR_WIFI_SSID="${SAVED_WIFI_SSID:-$CUR_WIFI_SSID}"
         CUR_WIFI_COUNTRY="${SAVED_WIFI_COUNTRY:-$CUR_WIFI_COUNTRY}"
-    fi
-
-    # Also read boot config if present (user may have pre-filled it)
-    if [[ -f "${CONFIG_FILE}" ]]; then
-        # shellcheck disable=SC1090
-        source "${CONFIG_FILE}" 2>/dev/null || true
-        [[ -n "${HOSTNAME}" ]]          && CUR_HOSTNAME="${HOSTNAME}"
-        [[ -n "${TIMEZONE}" ]]          && CUR_TIMEZONE="${TIMEZONE}"
-        [[ -n "${LOCALE}" ]]            && CUR_LOCALE="${LOCALE}"
-        [[ -n "${KEYBOARD_LAYOUT}" ]]   && CUR_KEYBOARD_LAYOUT="${KEYBOARD_LAYOUT}"
-        [[ -n "${KEYBOARD_VARIANT}" ]]  && CUR_KEYBOARD_VARIANT="${KEYBOARD_VARIANT}"
-        [[ -n "${ROOT_PASSWORD}" ]]     && CUR_ROOT_PASSWORD="${ROOT_PASSWORD}"
-        [[ -n "${USERNAME}" ]]          && CUR_USERNAME="${USERNAME}"
-        [[ -n "${USER_PASSWORD}" ]]     && CUR_USER_PASSWORD="${USER_PASSWORD}"
-        [[ -n "${WIFI_SSID}" ]]         && CUR_WIFI_SSID="${WIFI_SSID}"
-        [[ -n "${WIFI_COUNTRY}" ]]      && CUR_WIFI_COUNTRY="${WIFI_COUNTRY}"
     fi
 }
 
@@ -287,7 +288,12 @@ SAVED_WIFI_COUNTRY=${NEW_WIFI_COUNTRY}
 EOF
     chmod 600 "${SETUP_CONF}"
 
-    # Also write back adnrpi-config.txt.done so firstboot.sh skips
+    if [[ ! -f "${SETUP_CONF}" ]]; then
+        echo -e "  ${YELLOW}WARNING: Could not write ${SETUP_CONF} — setup will re-launch on next login.${NC}"
+        echo -e "  ${DIM}Check that /etc/adnrpi is writable.${NC}"
+    fi
+
+    # Archive the boot config so it no longer interferes
     if [[ -f "${CONFIG_FILE}" ]]; then
         mv -f "${CONFIG_FILE}" "${CONFIG_FILE}.done" 2>/dev/null || true
     fi

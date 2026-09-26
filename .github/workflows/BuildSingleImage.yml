@@ -133,6 +133,7 @@ jobs:
             -e 's/bookworm-/bookworm-debian12-/' \
             -e 's/trixie-/trixie-debian13-/' \
             -e 's/forky-/forky-debian14-/' \
+            -e 's/focal-/focal-ubuntu20.04-/' \
             -e 's/jammy-/jammy-ubuntu22.04-/' \
             -e 's/noble-/noble-ubuntu24.04-/' \
             -e 's/resolute-/resolute-ubuntu26.04-/')

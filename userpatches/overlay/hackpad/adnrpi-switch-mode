@@ -1,0 +1,23 @@
+#!/bin/bash
+# Switch between server mode (Kivy/framebuffer) and desktop mode (XFCE/X11)
+# Usage: adnrpi-switch-mode [server|desktop]
+
+case "${1:-}" in
+    server)
+        systemctl set-default multi-user.target
+        systemctl disable lightdm 2>/dev/null || true
+        systemctl enable adnrpi-hackpad 2>/dev/null || true
+        echo "Server mode set — reboot to apply."
+        ;;
+    desktop)
+        systemctl set-default graphical.target
+        systemctl enable lightdm 2>/dev/null || true
+        systemctl disable adnrpi-hackpad 2>/dev/null || true
+        echo "Desktop mode set — reboot to apply."
+        ;;
+    *)
+        current=$(systemctl get-default 2>/dev/null)
+        echo "Current target: ${current}"
+        echo "Usage: adnrpi-switch-mode [server|desktop]"
+        ;;
+esac

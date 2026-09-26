@@ -56,6 +56,10 @@ Main() {
                     ;;
                 ros1) installROS1Noetic ;;
             esac
+            if [[ "${ADNRPI_PENTEST}" == "yes" ]]; then
+                installPentestTools
+                installHackPad
+            fi
             ;;
     esac
 }
@@ -416,6 +420,90 @@ installFirstBootConfig() {
     chmod -x /etc/profile.d/armbian-check-first-run.sh 2>/dev/null || true
 
     echo "ADNRPi first-boot configuration system ... [DONE]"
+}
+
+installPentestTools() {
+    echo "Installing pentest tools ..."
+
+    apt-get update
+
+    # Network scanning
+    apt-get install -y --no-install-recommends \
+        nmap masscan netdiscover arp-scan nbtscan \
+        net-tools iputils-ping traceroute whois dnsutils
+
+    # WiFi
+    apt-get install -y --no-install-recommends \
+        aircrack-ng kismet reaver bully hostapd iw rfkill
+
+    # Web
+    apt-get install -y --no-install-recommends \
+        nikto sqlmap gobuster dirb curl wget \
+        whatweb wfuzz
+
+    # Passwords & hashes
+    apt-get install -y --no-install-recommends \
+        john hydra hashcat crunch wordlists \
+        medusa
+
+    # Recon & OSINT
+    apt-get install -y --no-install-recommends \
+        dnsrecon fierce theharvester maltego \
+        recon-ng
+
+    # Capture & analysis
+    apt-get install -y --no-install-recommends \
+        tcpdump tshark wireshark ngrep ettercap-text-only \
+        netcat-openbsd socat responder
+
+    # Exploitation
+    apt-get install -y --no-install-recommends \
+        metasploit-framework exploitdb \
+        beef-xss
+
+    # Utilities
+    apt-get install -y --no-install-recommends \
+        python3 python3-pip git vim tmux screen \
+        openssh-server ufw
+
+    echo "Installing pentest tools ... [DONE]"
+}
+
+installHackPad() {
+    echo "Installing HackPad (Kivy touchscreen interface) ..."
+
+    # Kivy dependencies
+    apt-get install -y --no-install-recommends \
+        python3-kivy python3-kivymd \
+        libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
+        libgles2 libgles2-mesa-dev \
+        xfce4 xfce4-terminal lightdm \
+        fonts-dejavu-core
+
+    # Disable LightDM by default — server mode uses KMS/framebuffer
+    systemctl disable lightdm 2>/dev/null || true
+
+    # Install HackPad application
+    local appdir="/opt/adnrpi-hackpad"
+    mkdir -p "${appdir}"
+    cp -rv /tmp/overlay/hackpad/* "${appdir}/"
+    chmod +x "${appdir}/main.py"
+    chmod +x "${appdir}/adnrpi-switch-mode"
+
+    # Global launcher
+    ln -sf "${appdir}/adnrpi-switch-mode" /usr/local/bin/adnrpi-switch-mode
+
+    # Systemd service — auto-start HackPad on framebuffer at boot
+    cp -v /tmp/overlay/adnrpi-hackpad.service /etc/systemd/system/
+    chmod 644 /etc/systemd/system/adnrpi-hackpad.service
+    systemctl enable adnrpi-hackpad.service
+
+    # Desktop shortcut for XFCE mode
+    mkdir -p /usr/share/applications
+    cp -v /tmp/overlay/adnrpi-hackpad.desktop /usr/share/applications/
+    chmod 644 /usr/share/applications/adnrpi-hackpad.desktop
+
+    echo "Installing HackPad ... [DONE]"
 }
 
 Main "$@"

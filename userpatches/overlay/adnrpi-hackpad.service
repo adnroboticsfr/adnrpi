@@ -1,0 +1,20 @@
+[Unit]
+Description=ADNRPi HackPad touchscreen interface
+After=systemd-udevd.service adnrpipad-console-rotate.service
+Wants=adnrpipad-console-rotate.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/adnrpi-hackpad
+Environment=SDL_VIDEODRIVER=kmsdrm
+Environment=SDL_RENDERDRIVER=opengles2
+Environment=KIVY_WINDOW=sdl2
+Environment=KIVY_GL_BACKEND=sdl2
+Environment=DISPLAY=
+ExecStart=/usr/bin/python3 /opt/adnrpi-hackpad/main.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

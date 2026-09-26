@@ -8,10 +8,11 @@ Type=simple
 User=root
 WorkingDirectory=/opt/adnrpi-hackpad
 Environment=SDL_VIDEODRIVER=kmsdrm
-Environment=SDL_RENDERDRIVER=opengles2
 Environment=KIVY_WINDOW=sdl2
 Environment=KIVY_GL_BACKEND=sdl2
 Environment=DISPLAY=
+# Wait for DRM device (Lima GPU) to be ready before launching Kivy
+ExecStartPre=/bin/sh -c 'i=0; while [ ! -e /dev/dri/card0 ] && [ $i -lt 20 ]; do sleep 1; i=$((i+1)); done'
 ExecStart=/usr/bin/python3 /opt/adnrpi-hackpad/main.py
 Restart=on-failure
 RestartSec=5

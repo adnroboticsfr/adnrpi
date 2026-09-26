@@ -89,6 +89,10 @@ installADNRPiPadDetection() {
     cp -v /tmp/overlay/adnrpi-pad-font.sh /etc/profile.d/adnrpi-pad-font.sh
     chmod 644 /etc/profile.d/adnrpi-pad-font.sh
 
+    # Manual display-mode switcher (pad ↔ hdmi) — edits armbianEnv.txt + reboots
+    cp -v /tmp/overlay/adnrpi-display-mode /usr/local/bin/adnrpi-display-mode
+    chmod 755 /usr/local/bin/adnrpi-display-mode
+
     echo "Install ADNRPi Pad screen detection + console rotation ... [DONE]"
 }
 
@@ -472,11 +476,13 @@ installPentestTools() {
 installHackPad() {
     echo "Installing HackPad (Kivy touchscreen interface) ..."
 
-    # Kivy dependencies
+    # Kivy + XFCE dependencies
+    # python3-kivymd is NOT in Debian repos — omitted intentionally (not used by HackPad)
+    # libsdl2-*-dev are build-time headers — not needed at runtime
     apt-get install -y --no-install-recommends \
-        python3-kivy python3-kivymd \
-        libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
-        libgles2 libgles2-mesa-dev \
+        python3-kivy \
+        libsdl2-2.0-0 libsdl2-image-2.0-0 libsdl2-mixer-2.0-0 libsdl2-ttf-2.0-0 \
+        libgles2 \
         xfce4 xfce4-terminal lightdm \
         fonts-dejavu-core
 

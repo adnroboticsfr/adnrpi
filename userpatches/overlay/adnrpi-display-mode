@@ -1,0 +1,52 @@
+#!/bin/sh
+# Switch HDMI resolution between ADNRPi Pad (800x480) and standard monitor (1280x720).
+# Edits armbianEnv.txt then reboots. The H3 reads this at boot — there is no
+# live resolution switch.
+#
+# Usage: adnrpi-display-mode [pad|hdmi]
+#   pad   → 800x480 (ADNRPi Pad built-in 4.3" screen)
+#   hdmi  → 1280x720 (default for standard HDMI monitors)
+
+BOOT_CFG="/boot/armbianEnv.txt"
+MODE_720P="video=HDMI-A-1:1280x720@60"
+MODE_800P="video=HDMI-A-1:800x480@60"
+
+set_mode() {
+    local new="$1"
+    if grep -q 'video=HDMI-A-1:' "${BOOT_CFG}" 2>/dev/null; then
+        sed -i "s|video=HDMI-A-1:[^[:space:]]*|${new}|" "${BOOT_CFG}"
+    elif grep -q '^extraargs=' "${BOOT_CFG}" 2>/dev/null; then
+        sed -i "s|^extraargs=\(.*\)|extraargs=\1 ${new}|" "${BOOT_CFG}"
+    else
+        echo "extraargs=${new}" >> "${BOOT_CFG}"
+    fi
+}
+
+case "${1:-}" in
+    pad)
+        set_mode "${MODE_800P}"
+        echo "Mode ADNRPi Pad (800x480) configuré dans armbianEnv.txt"
+        echo "Redémarrage dans 3 secondes..."
+        sleep 3
+        systemctl reboot
+        ;;
+    hdmi|monitor)
+        set_mode "${MODE_720P}"
+        echo "Mode moniteur HDMI (1280x720) configuré dans armbianEnv.txt"
+        echo "Redémarrage dans 3 secondes..."
+        sleep 3
+        systemctl reboot
+        ;;
+    status|"")
+        current=$(grep -o 'video=HDMI-A-1:[^[:space:]]*' "${BOOT_CFG}" 2>/dev/null | head -1)
+        echo "Mode actuel : ${current:-non défini (720p par défaut)}"
+        echo ""
+        echo "Usage : adnrpi-display-mode [pad|hdmi]"
+        echo "  pad   → 800x480  (ADNRPi Pad 4.3\")"
+        echo "  hdmi  → 1280x720 (moniteur HDMI standard)"
+        ;;
+    *)
+        echo "Usage : adnrpi-display-mode [pad|hdmi|status]" >&2
+        exit 1
+        ;;
+esac

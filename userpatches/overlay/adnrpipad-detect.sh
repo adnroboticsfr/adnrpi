@@ -1,13 +1,13 @@
 #!/bin/sh
 # ADNRPi Pad screen detection
-# The ADNRPi Pad built-in screen is a 4.3" HDMI 800x480 panel with a USB touchscreen.
-# A plain HDMI monitor never matches both criteria, so rotation is only applied
-# on a real ADNRPi Pad.
-# Exit 0 if the ADNRPi Pad screen is detected, 1 otherwise.
+# The ADNRPi Pad is a 4.3" 800x480 HDMI panel with a USB touchscreen.
+# Detection uses ONLY EDID (what the screen natively advertises) — NOT the
+# kernel framebuffer size, which reflects the forced cmdline mode (720p or
+# 800p) and would give false positives on normal monitors.
 #
-# Usage: adnrpipad-detect.sh              full check (resolution + touchscreen)
-#        adnrpipad-detect.sh --screen-only  resolution check only (instant, no
-#                                          dependency on USB touch enumeration)
+# Exit 0 if ADNRPi Pad detected, 1 otherwise.
+# Usage: adnrpipad-detect.sh              full check (touchscreen + EDID)
+#        adnrpipad-detect.sh --screen-only  EDID only (no USB dependency)
 
 ADNRPIPAD_RES="800x480"
 
@@ -21,21 +21,20 @@ has_touchscreen() {
 }
 
 has_adnrpipad_resolution() {
-    # 800x480 anywhere in the mode list of a connected DRM output. Not just the
-    # first entry: the video= mode forced on the kernel command line (720p, for
-    # 4K screen compatibility) is inserted at the head of the list, but the
-    # panel's native 800x480 stays in it. No regular monitor or TV advertises
-    # 800x480, so scanning the whole list is just as discriminating.
+    # Check EDID-reported modes from every connected DRM output.
+    # This list comes from what the screen itself advertises — it is NOT
+    # affected by the video= kernel cmdline override.
+    # Standard monitors/TVs never advertise 800x480 in their EDID.
     for conn in /sys/class/drm/card*-*; do
         [ -f "${conn}/status" ] || continue
         [ "$(cat "${conn}/status")" = "connected" ] || continue
         grep -q "^${ADNRPIPAD_RES}$" "${conn}/modes" 2>/dev/null && return 0
     done
-    # Fallback when no DRM connector info is available: framebuffer size
-    if [ -f /sys/class/graphics/fb0/virtual_size ]; then
-        grep -q "^800,480$" /sys/class/graphics/fb0/virtual_size && return 0
-    fi
     return 1
+    # NOTE: the fb0/virtual_size fallback was intentionally removed — it
+    # reflected the forced kernel cmdline mode, not the screen's EDID, and
+    # caused false positives (rotation on normal monitors when armbianEnv.txt
+    # still had 800x480 from a previous pad session).
 }
 
 if [ "$1" = "--screen-only" ]; then

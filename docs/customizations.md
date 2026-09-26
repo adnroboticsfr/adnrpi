@@ -306,21 +306,32 @@ rendering. Noble is not affected (uses xtradeb Chromium which renders fine).
 
 ### Configs and targets
 
-| Config | OS | ROS | Notes |
-|--------|----|-----|-------|
-| `noble-ros2-jazzy-server` | Ubuntu 24.04 | ROS2 Jazzy | Official armhf support |
-| `focal-ros1-server` | Ubuntu 20.04 | ROS1 Noetic | Official armhf target |
+| Config                      | OS            | ROS        | État                            |
+|-----------------------------|---------------|------------|---------------------------------|
+| `noble-ros2-jazzy-server`   | Ubuntu 24.04  | ROS2 Jazzy | actif                           |
+| `focal-ros1-server`         | Ubuntu 20.04  | ROS1 Noetic| désactivé `.disabled` (EOL)     |
 
-### APT key rotation risk
+### Ubuntu 20.04 focal — désactivé (EOL avril 2025)
+
+`adnrpi1-focal-ros1-server.conf` renommé en `.disabled`. Ubuntu 20.04 a atteint sa
+fin de vie en avril 2025 : les paquets ne sont plus accessibles sur les miroirs
+standards. Armbian `artifact-armbian-base-files.sh` échoue avec
+`found_package_filename est nul` car `base-files` n'est plus dans `focal-updates`.
+ROS1 Noetic est également EOL depuis mai 2025.
+
+Pour réactiver si besoin : patcher Armbian pour pointer vers `old-releases.ubuntu.com`
+au lieu des miroirs standards, puis renommer le `.disabled` en `.conf`.
+
+### APT key rotation
+
 ROS GPG keys are imported at build time. If the key changes, the build fails
-with a GPG verification error. Update the key URL in `installROS1Noetic()` or
-`installROS2()` as needed.
+with a GPG verification error. Update the key URL in `installROS2()` as needed.
 
 ### Verification after upgrade
+
 ```bash
-source /opt/ros/jazzy/setup.bash   # or noetic
-ros2 topic list                    # jazzy
-rostopic list                      # noetic
+source /opt/ros/jazzy/setup.bash
+ros2 topic list
 ```
 
 ---
@@ -344,6 +355,91 @@ Change `ARMBIAN_BRANCH` in `configs/config-default.conf`. Test one config with
 
 ---
 
+## 15. HackPad — interface pentesting tactile Kivy
+
+| Item | Valeur |
+|------|--------|
+| Files app | `userpatches/overlay/hackpad/` (main.py, screens/, tools/) |
+| Files système | `adnrpi-hackpad.service`, `adnrpi-hackpad.desktop`, `hackpad/adnrpi-switch-mode` |
+| Config build | `configs/adnrpi1-bookworm-pentest-server.conf` (`ADNRPI_PENTEST=yes`) |
+| Script install | `customize-image.sh → installPentestTools() + installHackPad()` |
+| Risk on upgrade | **Medium** — dépend de la compatibilité Kivy + SDL2 backend KMS |
+
+### Ce que ça fait
+Un OS de pentest complet démarrant en **mode serveur** (pas d'X11) avec une interface
+tactile Kivy sur le framebuffer KMS. Depuis l'interface, l'utilisateur peut basculer
+en **mode desktop** (XFCE + LightDM) via un bouton qui change la cible systemd et redémarre.
+
+#### Architecture mode dual
+
+| Mode            | systemd default      | Service actif              |
+|-----------------|----------------------|----------------------------|
+| Server (défaut) | `multi-user.target`  | `adnrpi-hackpad.service`   |
+| Desktop         | `graphical.target`   | `lightdm.service`          |
+
+CLI helper : `adnrpi-switch-mode [server|desktop]`
+
+#### Outils pentesting installés
+
+`installPentestTools()` installe : nmap, masscan, aircrack-ng, nikto, sqlmap, gobuster,
+john, hydra, hashcat, dnsrecon, theHarvester, tcpdump, tshark, responder, netcat, curl, wget
+
+#### Structure de l'app Kivy (`/opt/adnrpi-hackpad/`)
+
+```text
+main.py               — détecte framebuffer vs X11, SDL env vars
+screens/
+  home.py             — grille 3×2 catégories avec boutons settings/mode
+  category.py         — liste outils filtrée par catégorie (scroll 2 colonnes)
+  tool.py             — champs paramètres, RUN/STOP/CLEAR, output live via subprocess
+  settings.py         — IP cible, interface, wordlist, dossier output, sysinfo
+  mode.py             — bascule server/desktop + reboot en 5 s
+tools/
+  registry.py         — 35 outils, 6 catégories
+```
+
+#### Registre d'outils (registry.py)
+
+| Catégorie | Nombre | Exemples                                   |
+|-----------|--------|--------------------------------------------|
+| network   | 8      | nmap (ping/ports/full/vuln), masscan, netcat |
+| wifi      | 7      | airodump-ng, aireplay-ng, aircrack-ng      |
+| web       | 6      | nikto, sqlmap, gobuster, curl              |
+| passwords | 6      | hydra, john, hashcat                       |
+| recon     | 6      | dnsrecon, theHarvester, whois              |
+| capture   | 7      | tcpdump, tshark, responder                 |
+
+#### Service systemd
+
+```ini
+[Service]
+Environment=SDL_VIDEODRIVER=kmsdrm
+Environment=SDL_RENDERDRIVER=opengles2
+Environment=KIVY_WINDOW=sdl2
+Environment=KIVY_GL_BACKEND=sdl2
+Environment=DISPLAY=
+ExecStart=/usr/bin/python3 /opt/adnrpi-hackpad/main.py
+Restart=on-failure
+RestartSec=5
+WantedBy=multi-user.target
+```
+
+#### Paramètres sauvegardés
+
+`/etc/adnrpi-hackpad/settings.conf` — IP cible, interface réseau, wordlist, dossier output
+
+### Vérification après upgrade
+
+- `python3 -c "import kivy"` — Kivy s'installe correctement sur le nouvel OS
+- `SDL_VIDEODRIVER=kmsdrm python3 -c "import kivy"` — backend KMS détecté sans erreur
+- Lima / GLES2 toujours fonctionnel sur H3 (`/dev/dri/card0` présent, `dmesg | grep lima`)
+- `systemctl status adnrpi-hackpad` — service démarre en mode server
+- Bascule mode Desktop dans l'app → `graphical.target` → LightDM démarre bien au reboot
+- `adnrpi-switch-mode server` → revient en mode Kivy au reboot
+- Tous les outils pentesting disponibles dans les dépôts APT du nouvel OS
+
+---
+
 ## Checklist for a new Armbian release
 
 - [ ] Update `ARMBIAN_BRANCH` in `config-default.conf`
@@ -352,5 +448,7 @@ Change `ARMBIAN_BRANCH` in `configs/config-default.conf`. Test one config with
 - [ ] Check §10 — do the DRM sysfs paths still exist?
 - [ ] Check §11 — does the OPP overlay compile cleanly with the new kernel?
 - [ ] Check §13 — are ROS GPG keys still valid?
+- [ ] Check §15 — does Kivy install and start on KMS framebuffer? (bookworm-pentest build)
+- [ ] Check §15 — are all pentesting tools still in APT repos for the new base OS?
 - [ ] Re-enable jammy configs (§3) if the `no sunxi` BSP error is fixed upstream
 - [ ] Update **Last reviewed against** at the top of this file

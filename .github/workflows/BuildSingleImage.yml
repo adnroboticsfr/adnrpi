@@ -159,13 +159,13 @@ jobs:
           sha256sum ${{ steps.image_name.outputs.image_name }}.img.xz > ${{ steps.image_name.outputs.image_name }}.img.xz.sha256
 
       - name: Upload compressed image
-        uses: actions/upload-artifact@v4.3.0
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.image_name.outputs.image_name }}.img.xz
           path: ${{ github.workspace }}/build/output/images/${{ steps.image_name.outputs.image_name }}.img.xz
 
       - name: Upload compressed image checksum
-        uses: actions/upload-artifact@v4.3.0
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.image_name.outputs.image_name }}.img.xz.sha256
           path: ${{ github.workspace }}/build/output/images/${{ steps.image_name.outputs.image_name }}.img.xz.sha256

@@ -49,10 +49,7 @@ jobs:
 
       - name: Get Time
         id: time
-        uses: nanzm/get-time-action@v2.0
-        with:
-          timeZone: UTC
-          format: "YYYY-MM-DD-HHmm"
+        run: echo "time=$(date -u +%Y-%m-%d-%H%M)" >> "$GITHUB_OUTPUT"
 
   build:
     name: Build ${{ matrix.configfile }}
@@ -114,19 +111,19 @@ jobs:
           sha256sum ${{ steps.image_name.outputs.image_name }}.img.xz > ${{ steps.image_name.outputs.image_name }}.img.xz.sha256
 
       - name: Upload compressed image
-        uses: actions/upload-artifact@v4.3.0
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.image_name.outputs.image_name }}.img.xz
           path: ${{ github.workspace }}/build/output/images/${{ steps.image_name.outputs.image_name }}.img.xz
 
       - name: Upload compressed image checksum
-        uses: actions/upload-artifact@v4.3.0
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.image_name.outputs.image_name }}.img.xz.sha256
           path: ${{ github.workspace }}/build/output/images/${{ steps.image_name.outputs.image_name }}.img.xz.sha256
 
       - name: Upload Build Summary
-        uses: actions/upload-artifact@v4.3.0
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.image_name.outputs.image_name }}.txt
           path: ${{ github.workspace }}/build/output/images/${{ steps.image_name.outputs.image_name }}.txt
@@ -143,7 +140,7 @@ jobs:
 
       - name: Upload kernel and U-Boot packages
         if: matrix.configfile == 'adnrpi1-trixie-server' || matrix.configfile == 'adnrpi1-bullseye-server'
-        uses: actions/upload-artifact@v4.3.0
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.configfile == 'adnrpi1-bullseye-server' && 'kernel-debs-legacy' || 'kernel-debs-current' }}
           if-no-files-found: warn

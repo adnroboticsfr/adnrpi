@@ -1,33 +1,63 @@
 """
-Central tool registry. Each tool defines:
+Central tool registry.
+Each tool:
   name       display name
-  desc       one-line description
+  desc       one-line description shown in tool header
   params     list of {key, label, default, hint, password}
-  build_cmd  function(params) -> list[str]  (the command to run)
+  build_cmd  function(params) -> list[str]
+
+Params with empty default get pre-filled from /etc/adnrpi-hackpad/settings.conf:
+  key "target" / "host"  <- target_ip
+  key "iface"            <- interface
+  key "wordlist"         <- wordlist
+  key "output"           <- output_dir/<toolname>
 """
 
 # ── Network Scan ──────────────────────────────────────────────────────────────
 
 NETWORK_TOOLS = [
     {
-        "name": "Nmap Quick",
-        "desc": "Fast TCP port scan",
+        "name": "Ping",
+        "desc": "Test connectivity to host",
         "params": [
-            {"key": "target", "label": "Target IP/range", "default": "192.168.1.0/24", "hint": "e.g. 192.168.1.1"},
+            {"key": "target", "label": "Target IP/host", "default": "192.168.1.1", "hint": "192.168.1.1"},
+            {"key": "count",  "label": "Count",          "default": "4",           "hint": "paquets"},
+        ],
+        "build_cmd": lambda p: ["ping", "-c", p["count"], p["target"]],
+    },
+    {
+        "name": "ARP-Scan LAN",
+        "desc": "Discover all devices on LAN",
+        "params": [
+            {"key": "iface", "label": "Interface", "default": "", "hint": "eth0 / wlan0"},
+        ],
+        "build_cmd": lambda p: ["arp-scan", "--interface", p["iface"], "--localnet"],
+    },
+    {
+        "name": "ARP Table",
+        "desc": "Show known hosts (arp -a)",
+        "params": [],
+        "build_cmd": lambda p: ["arp", "-a"],
+    },
+    {
+        "name": "Nmap Quick",
+        "desc": "Scan rapide TCP (top 100 ports)",
+        "params": [
+            {"key": "target", "label": "Target IP/range", "default": "", "hint": "192.168.1.0/24"},
         ],
         "build_cmd": lambda p: ["nmap", "-T4", "-F", p["target"]],
     },
     {
         "name": "Nmap Full",
-        "desc": "All ports + service version",
+        "desc": "All ports + service/version detection",
         "params": [
-            {"key": "target", "label": "Target IP", "default": "", "hint": "e.g. 192.168.1.1"},
+            {"key": "target", "label": "Target IP", "default": "", "hint": "192.168.1.1"},
         ],
         "build_cmd": lambda p: ["nmap", "-sV", "-p-", "--open", p["target"]],
     },
     {
         "name": "Nmap OS Detect",
-        "desc": "OS fingerprinting (root)",
+        "desc": "OS fingerprinting (root requis)",
         "params": [
             {"key": "target", "label": "Target IP", "default": "", "hint": ""},
         ],
@@ -35,73 +65,80 @@ NETWORK_TOOLS = [
     },
     {
         "name": "Nmap Vuln",
-        "desc": "Run vuln NSE scripts",
+        "desc": "Scripts NSE de détection de vulnérabilités",
         "params": [
             {"key": "target", "label": "Target IP", "default": "", "hint": ""},
         ],
         "build_cmd": lambda p: ["nmap", "--script=vuln", p["target"]],
     },
     {
-        "name": "Masscan",
-        "desc": "Ultra-fast port scan",
+        "name": "Nmap Script",
+        "desc": "Lancer un script NSE spécifique",
         "params": [
-            {"key": "target", "label": "Target range", "default": "192.168.1.0/24", "hint": ""},
-            {"key": "ports",  "label": "Ports",         "default": "1-65535",         "hint": ""},
-            {"key": "rate",   "label": "Rate (pkt/s)",  "default": "1000",            "hint": ""},
+            {"key": "target", "label": "Target",  "default": "", "hint": ""},
+            {"key": "script", "label": "Script",  "default": "http-title", "hint": "smb-vuln-ms17-010"},
+        ],
+        "build_cmd": lambda p: ["nmap", f"--script={p['script']}", p["target"]],
+    },
+    {
+        "name": "Masscan",
+        "desc": "Scan ultra-rapide (tous ports)",
+        "params": [
+            {"key": "target", "label": "Target range", "default": "", "hint": "192.168.1.0/24"},
+            {"key": "ports",  "label": "Ports",        "default": "1-65535", "hint": ""},
+            {"key": "rate",   "label": "Rate (pkt/s)", "default": "500",     "hint": ""},
         ],
         "build_cmd": lambda p: ["masscan", p["target"], "-p", p["ports"], "--rate", p["rate"]],
     },
     {
-        "name": "Netdiscover",
-        "desc": "ARP host discovery",
-        "params": [
-            {"key": "range", "label": "IP range", "default": "192.168.1.0/24", "hint": ""},
-        ],
-        "build_cmd": lambda p: ["netdiscover", "-r", p["range"], "-P"],
-    },
-    {
-        "name": "ARP-Scan",
-        "desc": "LAN ARP scan",
-        "params": [
-            {"key": "iface", "label": "Interface", "default": "eth0", "hint": "eth0 / wlan0"},
-        ],
-        "build_cmd": lambda p: ["arp-scan", "--interface", p["iface"], "--localnet"],
-    },
-    {
         "name": "Traceroute",
-        "desc": "Trace route to host",
+        "desc": "Chemin réseau vers la cible",
         "params": [
             {"key": "target", "label": "Target", "default": "", "hint": "host or IP"},
         ],
         "build_cmd": lambda p: ["traceroute", p["target"]],
     },
+    {
+        "name": "Netdiscover",
+        "desc": "ARP host discovery (passif possible)",
+        "params": [
+            {"key": "range", "label": "IP range", "default": "", "hint": "192.168.1.0/24"},
+        ],
+        "build_cmd": lambda p: ["netdiscover", "-r", p["range"], "-P"],
+    },
+    {
+        "name": "Port Check",
+        "desc": "Vérifier si un port est ouvert",
+        "params": [
+            {"key": "target", "label": "Target IP", "default": "", "hint": ""},
+            {"key": "port",   "label": "Port",      "default": "80", "hint": "22 80 443"},
+        ],
+        "build_cmd": lambda p: ["nc", "-zv", "-w", "3", p["target"], p["port"]],
+    },
 ]
 
 # ── WiFi Attack ───────────────────────────────────────────────────────────────
+# Workflow: 1) Airmon Start → 2) Airodump scan → 3) Airodump capture →
+#           4) Aireplay deauth → 5) Aircrack → 6) Airmon Stop
 
 WIFI_TOOLS = [
     {
-        "name": "Airmon-ng Start",
-        "desc": "Enable monitor mode",
+        "name": "1. Airmon Start",
+        "desc": "Tuer processus conflictuels + activer monitor",
         "params": [
-            {"key": "iface", "label": "Interface", "default": "wlan0", "hint": ""},
+            {"key": "iface", "label": "Interface WiFi", "default": "wlx40a5ef1333f3", "hint": "wlan0 / wlx..."},
         ],
-        "build_cmd": lambda p: ["airmon-ng", "start", p["iface"]],
+        "build_cmd": lambda p: [
+            "bash", "-c",
+            f"airmon-ng check kill && airmon-ng start {p['iface']}"
+        ],
     },
     {
-        "name": "Airmon-ng Stop",
-        "desc": "Disable monitor mode",
+        "name": "2. Airodump Scan",
+        "desc": "Scanner les réseaux WiFi visibles",
         "params": [
-            {"key": "iface", "label": "Interface", "default": "wlan0mon", "hint": ""},
-        ],
-        "build_cmd": lambda p: ["airmon-ng", "stop", p["iface"]],
-    },
-    {
-        "name": "Airodump-ng",
-        "desc": "Scan WiFi networks",
-        "params": [
-            {"key": "iface",   "label": "Interface",  "default": "wlan0mon", "hint": ""},
-            {"key": "channel", "label": "Channel",    "default": "",         "hint": "blank = all"},
+            {"key": "iface",   "label": "Interface monitor", "default": "wlx40a5ef1333f3", "hint": "wlan0mon"},
+            {"key": "channel", "label": "Channel",           "default": "",                   "hint": "vide = tous"},
         ],
         "build_cmd": lambda p: (
             ["airodump-ng", p["iface"], "--channel", p["channel"]]
@@ -109,13 +146,13 @@ WIFI_TOOLS = [
         ),
     },
     {
-        "name": "Airodump Capture",
-        "desc": "Capture handshake to file",
+        "name": "3. Airodump Capture",
+        "desc": "Capturer le handshake WPA",
         "params": [
-            {"key": "iface",   "label": "Interface",  "default": "wlan0mon", "hint": ""},
-            {"key": "bssid",   "label": "BSSID",      "default": "",         "hint": "AP MAC address"},
-            {"key": "channel", "label": "Channel",    "default": "6",        "hint": ""},
-            {"key": "output",  "label": "Output file","default": "/tmp/cap",  "hint": "prefix only"},
+            {"key": "iface",   "label": "Interface monitor",  "default": "wlx40a5ef1333f3", "hint": ""},
+            {"key": "bssid",   "label": "BSSID (AP)",         "default": "",                   "hint": "AA:BB:CC:DD:EE:FF"},
+            {"key": "channel", "label": "Channel",            "default": "6",                  "hint": ""},
+            {"key": "output",  "label": "Fichier sortie",     "default": "/tmp/cap",           "hint": "/tmp/cap"},
         ],
         "build_cmd": lambda p: [
             "airodump-ng", p["iface"],
@@ -125,13 +162,13 @@ WIFI_TOOLS = [
         ],
     },
     {
-        "name": "Aireplay Deauth",
-        "desc": "Deauth clients (force handshake)",
+        "name": "4. Aireplay Deauth",
+        "desc": "Forcer reconnexion client (handshake)",
         "params": [
-            {"key": "iface",  "label": "Interface", "default": "wlan0mon", "hint": ""},
-            {"key": "bssid",  "label": "AP BSSID",  "default": "",         "hint": ""},
-            {"key": "client", "label": "Client MAC", "default": "FF:FF:FF:FF:FF:FF", "hint": "FF:FF = broadcast"},
-            {"key": "count",  "label": "Packets",   "default": "10",       "hint": "0 = infinite"},
+            {"key": "iface",  "label": "Interface monitor", "default": "wlx40a5ef1333f3",  "hint": ""},
+            {"key": "bssid",  "label": "AP BSSID",          "default": "",                     "hint": ""},
+            {"key": "client", "label": "Client MAC",        "default": "FF:FF:FF:FF:FF:FF",    "hint": "FF:FF = broadcast"},
+            {"key": "count",  "label": "Paquets",           "default": "10",                   "hint": "0 = infini"},
         ],
         "build_cmd": lambda p: [
             "aireplay-ng", "--deauth", p["count"],
@@ -139,24 +176,24 @@ WIFI_TOOLS = [
         ],
     },
     {
-        "name": "Aircrack WPA",
-        "desc": "Crack WPA handshake",
+        "name": "5. Aircrack WPA",
+        "desc": "Cracker le handshake avec wordlist",
         "params": [
-            {"key": "cap",      "label": "Cap file",   "default": "/tmp/cap-01.cap", "hint": ""},
-            {"key": "wordlist", "label": "Wordlist",   "default": "/usr/share/wordlists/rockyou.txt", "hint": ""},
-            {"key": "bssid",    "label": "AP BSSID",   "default": "",                "hint": ""},
+            {"key": "cap",      "label": "Fichier .cap", "default": "/tmp/cap-01.cap",               "hint": ""},
+            {"key": "wordlist", "label": "Wordlist",     "default": "/usr/share/wordlists/rockyou.txt", "hint": ""},
+            {"key": "bssid",    "label": "AP BSSID",     "default": "",                "hint": ""},
         ],
         "build_cmd": lambda p: [
             "aircrack-ng", p["cap"], "-w", p["wordlist"], "-b", p["bssid"]
         ],
     },
     {
-        "name": "Wifite",
-        "desc": "Automated WiFi attack",
+        "name": "6. Airmon Stop",
+        "desc": "Désactiver le mode monitor",
         "params": [
-            {"key": "iface", "label": "Interface", "default": "wlan0", "hint": ""},
+            {"key": "iface", "label": "Interface monitor", "default": "wlx40a5ef1333f3", "hint": "wlan0mon"},
         ],
-        "build_cmd": lambda p: ["wifite", "--interface", p["iface"], "--kill"],
+        "build_cmd": lambda p: ["airmon-ng", "stop", p["iface"]],
     },
 ]
 
@@ -164,31 +201,27 @@ WIFI_TOOLS = [
 
 WEB_TOOLS = [
     {
-        "name": "Nikto",
-        "desc": "Web server vulnerability scan",
+        "name": "Curl Headers",
+        "desc": "Headers HTTP de la cible (rapide)",
         "params": [
             {"key": "url", "label": "Target URL", "default": "http://", "hint": "http://192.168.1.1"},
+        ],
+        "build_cmd": lambda p: ["curl", "-I", "-L", "--max-time", "10", p["url"]],
+    },
+    {
+        "name": "Nikto",
+        "desc": "Scan de vulnérabilités web",
+        "params": [
+            {"key": "url", "label": "Target URL", "default": "http://", "hint": ""},
         ],
         "build_cmd": lambda p: ["nikto", "-h", p["url"]],
     },
     {
-        "name": "SQLMap",
-        "desc": "SQL injection detection",
-        "params": [
-            {"key": "url",    "label": "URL",    "default": "http://", "hint": "URL with ?param=value"},
-            {"key": "level",  "label": "Level",  "default": "1",      "hint": "1-5"},
-            {"key": "risk",   "label": "Risk",   "default": "1",      "hint": "1-3"},
-        ],
-        "build_cmd": lambda p: [
-            "sqlmap", "-u", p["url"], "--level", p["level"], "--risk", p["risk"], "--batch"
-        ],
-    },
-    {
         "name": "Gobuster Dir",
-        "desc": "Directory brute-force",
+        "desc": "Brute-force de répertoires",
         "params": [
             {"key": "url",      "label": "Target URL", "default": "http://", "hint": ""},
-            {"key": "wordlist", "label": "Wordlist",   "default": "/usr/share/wordlists/dirb/common.txt", "hint": ""},
+            {"key": "wordlist", "label": "Wordlist",   "default": "/usr/share/dirb/wordlists/common.txt", "hint": ""},
             {"key": "threads",  "label": "Threads",    "default": "10",  "hint": ""},
         ],
         "build_cmd": lambda p: [
@@ -197,30 +230,26 @@ WEB_TOOLS = [
     },
     {
         "name": "Gobuster DNS",
-        "desc": "DNS subdomain brute-force",
+        "desc": "Brute-force sous-domaines DNS",
         "params": [
             {"key": "domain",   "label": "Domain",   "default": "", "hint": "example.com"},
-            {"key": "wordlist", "label": "Wordlist",  "default": "/usr/share/wordlists/dirb/common.txt", "hint": ""},
+            {"key": "wordlist", "label": "Wordlist",  "default": "/usr/share/dirb/wordlists/common.txt", "hint": ""},
         ],
         "build_cmd": lambda p: [
             "gobuster", "dns", "-d", p["domain"], "-w", p["wordlist"]
         ],
     },
     {
-        "name": "WhatWeb",
-        "desc": "Identify web technologies",
+        "name": "SQLMap",
+        "desc": "Détection injection SQL",
         "params": [
-            {"key": "url", "label": "Target URL", "default": "http://", "hint": ""},
+            {"key": "url",   "label": "URL",   "default": "http://", "hint": "URL?param=val"},
+            {"key": "level", "label": "Level", "default": "1",      "hint": "1-5"},
+            {"key": "risk",  "label": "Risk",  "default": "1",      "hint": "1-3"},
         ],
-        "build_cmd": lambda p: ["whatweb", "-a", "3", p["url"]],
-    },
-    {
-        "name": "Curl Headers",
-        "desc": "Show HTTP response headers",
-        "params": [
-            {"key": "url", "label": "Target URL", "default": "http://", "hint": ""},
+        "build_cmd": lambda p: [
+            "sqlmap", "-u", p["url"], "--level", p["level"], "--risk", p["risk"], "--batch"
         ],
-        "build_cmd": lambda p: ["curl", "-I", "-L", "--max-time", "10", p["url"]],
     },
 ]
 
@@ -228,41 +257,20 @@ WEB_TOOLS = [
 
 PASSWORD_TOOLS = [
     {
-        "name": "Hydra SSH",
-        "desc": "Brute-force SSH login",
+        "name": "HashID",
+        "desc": "Identifier le type de hash",
         "params": [
-            {"key": "target",   "label": "Target IP", "default": "",     "hint": ""},
-            {"key": "user",     "label": "Username",  "default": "root", "hint": ""},
-            {"key": "wordlist", "label": "Wordlist",  "default": "/usr/share/wordlists/rockyou.txt", "hint": ""},
-            {"key": "threads",  "label": "Threads",   "default": "4",    "hint": ""},
+            {"key": "hash", "label": "Hash", "default": "", "hint": "coller le hash ici"},
         ],
-        "build_cmd": lambda p: [
-            "hydra", "-l", p["user"], "-P", p["wordlist"],
-            "-t", p["threads"], p["target"], "ssh"
-        ],
-    },
-    {
-        "name": "Hydra HTTP",
-        "desc": "Brute-force HTTP form",
-        "params": [
-            {"key": "target",   "label": "Target IP",    "default": "",        "hint": ""},
-            {"key": "path",     "label": "Login path",   "default": "/login",  "hint": ""},
-            {"key": "user",     "label": "Username",     "default": "admin",   "hint": ""},
-            {"key": "wordlist", "label": "Wordlist",     "default": "/usr/share/wordlists/rockyou.txt", "hint": ""},
-            {"key": "params",   "label": "POST params",  "default": "user=^USER^&pass=^PASS^:F=incorrect", "hint": ""},
-        ],
-        "build_cmd": lambda p: [
-            "hydra", "-l", p["user"], "-P", p["wordlist"],
-            p["target"], "http-post-form", f"{p['path']}:{p['params']}"
-        ],
+        "build_cmd": lambda p: ["hashid", p["hash"]],
     },
     {
         "name": "John the Ripper",
-        "desc": "Crack password hash file",
+        "desc": "Cracker un fichier de hash",
         "params": [
-            {"key": "hashfile", "label": "Hash file",  "default": "/tmp/hash.txt", "hint": ""},
-            {"key": "wordlist", "label": "Wordlist",   "default": "/usr/share/wordlists/rockyou.txt", "hint": "blank = incremental"},
-            {"key": "format",   "label": "Format",     "default": "",              "hint": "md5crypt, sha512crypt…"},
+            {"key": "hashfile", "label": "Fichier hash", "default": "/tmp/hash.txt", "hint": ""},
+            {"key": "wordlist", "label": "Wordlist",     "default": "/usr/share/wordlists/rockyou.txt", "hint": "vide = incremental"},
+            {"key": "format",   "label": "Format",       "default": "",              "hint": "md5crypt sha512crypt"},
         ],
         "build_cmd": lambda p: (
             ["john", p["hashfile"]]
@@ -271,43 +279,68 @@ PASSWORD_TOOLS = [
         ),
     },
     {
-        "name": "Hashcat Wordlist",
-        "desc": "GPU/CPU hash cracking",
+        "name": "Hydra SSH",
+        "desc": "Brute-force login SSH",
         "params": [
-            {"key": "hashfile", "label": "Hash file", "default": "/tmp/hash.txt", "hint": ""},
-            {"key": "mode",     "label": "Hash mode",  "default": "0",   "hint": "0=MD5 1800=sha512crypt"},
-            {"key": "wordlist", "label": "Wordlist",   "default": "/usr/share/wordlists/rockyou.txt", "hint": ""},
+            {"key": "target",   "label": "Target IP", "default": "",                              "hint": ""},
+            {"key": "user",     "label": "Username",  "default": "root",                           "hint": ""},
+            {"key": "wordlist", "label": "Wordlist",  "default": "/usr/share/wordlists/rockyou.txt","hint": ""},
+            {"key": "threads",  "label": "Threads",   "default": "4",                              "hint": ""},
         ],
         "build_cmd": lambda p: [
-            "hashcat", "-m", p["mode"], p["hashfile"], p["wordlist"],
-            "--force", "--status"
+            "hydra", "-l", p["user"], "-P", p["wordlist"],
+            "-t", p["threads"], p["target"], "ssh"
         ],
     },
     {
-        "name": "Crunch",
-        "desc": "Generate custom wordlist",
+        "name": "Hydra FTP",
+        "desc": "Brute-force login FTP",
         "params": [
-            {"key": "min",    "label": "Min length", "default": "6",  "hint": ""},
-            {"key": "max",    "label": "Max length", "default": "8",  "hint": ""},
-            {"key": "chars",  "label": "Charset",    "default": "abcdefghijklmnopqrstuvwxyz0123456789", "hint": ""},
-            {"key": "output", "label": "Output file","default": "/tmp/wordlist.txt", "hint": ""},
+            {"key": "target",   "label": "Target IP", "default": "",                               "hint": ""},
+            {"key": "user",     "label": "Username",  "default": "admin",                          "hint": ""},
+            {"key": "wordlist", "label": "Wordlist",  "default": "/usr/share/wordlists/rockyou.txt","hint": ""},
+        ],
+        "build_cmd": lambda p: [
+            "hydra", "-l", p["user"], "-P", p["wordlist"], p["target"], "ftp"
+        ],
+    },
+    {
+        "name": "Hydra HTTP",
+        "desc": "Brute-force formulaire HTTP POST",
+        "params": [
+            {"key": "target",   "label": "Target IP",   "default": "",                               "hint": ""},
+            {"key": "path",     "label": "Login path",  "default": "/login",                         "hint": ""},
+            {"key": "user",     "label": "Username",    "default": "admin",                          "hint": ""},
+            {"key": "wordlist", "label": "Wordlist",    "default": "/usr/share/wordlists/rockyou.txt","hint": ""},
+            {"key": "params",   "label": "POST params", "default": "user=^USER^&pass=^PASS^:F=incorrect", "hint": ""},
+        ],
+        "build_cmd": lambda p: [
+            "hydra", "-l", p["user"], "-P", p["wordlist"],
+            p["target"], "http-post-form", f"{p['path']}:{p['params']}"
+        ],
+    },
+    {
+        "name": "SMBClient",
+        "desc": "Lister les partages SMB",
+        "params": [
+            {"key": "target", "label": "Target IP", "default": "",    "hint": ""},
+            {"key": "user",   "label": "Username",  "default": "guest","hint": ""},
+        ],
+        "build_cmd": lambda p: [
+            "smbclient", "-L", f"//{p['target']}", "-U", p["user"], "-N"
+        ],
+    },
+    {
+        "name": "Crunch Wordlist",
+        "desc": "Générer une wordlist personnalisée",
+        "params": [
+            {"key": "min",    "label": "Long. min", "default": "6",    "hint": ""},
+            {"key": "max",    "label": "Long. max", "default": "8",    "hint": ""},
+            {"key": "chars",  "label": "Charset",   "default": "abcdefghijklmnopqrstuvwxyz0123456789", "hint": ""},
+            {"key": "output", "label": "Fichier",   "default": "/tmp/wordlist.txt", "hint": ""},
         ],
         "build_cmd": lambda p: [
             "crunch", p["min"], p["max"], p["chars"], "-o", p["output"]
-        ],
-    },
-    {
-        "name": "Medusa",
-        "desc": "Network login brute-force",
-        "params": [
-            {"key": "target",   "label": "Target IP",  "default": "",      "hint": ""},
-            {"key": "user",     "label": "Username",   "default": "admin", "hint": ""},
-            {"key": "wordlist", "label": "Wordlist",   "default": "/usr/share/wordlists/rockyou.txt", "hint": ""},
-            {"key": "module",   "label": "Module",     "default": "ssh",   "hint": "ssh ftp http smb"},
-        ],
-        "build_cmd": lambda p: [
-            "medusa", "-h", p["target"], "-u", p["user"],
-            "-P", p["wordlist"], "-M", p["module"]
         ],
     },
 ]
@@ -317,7 +350,7 @@ PASSWORD_TOOLS = [
 RECON_TOOLS = [
     {
         "name": "Whois",
-        "desc": "Domain registration info",
+        "desc": "Infos d'enregistrement domaine",
         "params": [
             {"key": "domain", "label": "Domain", "default": "", "hint": "example.com"},
         ],
@@ -325,49 +358,28 @@ RECON_TOOLS = [
     },
     {
         "name": "DNS Lookup",
-        "desc": "DNS record query",
+        "desc": "Requête enregistrement DNS",
         "params": [
-            {"key": "domain", "label": "Domain",      "default": "",   "hint": "example.com"},
-            {"key": "type",   "label": "Record type", "default": "ANY","hint": "A MX NS TXT"},
+            {"key": "domain", "label": "Domain",      "default": "",    "hint": "example.com"},
+            {"key": "type",   "label": "Record type", "default": "ANY", "hint": "A MX NS TXT"},
         ],
         "build_cmd": lambda p: ["dig", p["type"], p["domain"]],
     },
     {
         "name": "DNSRecon",
-        "desc": "DNS enumeration",
+        "desc": "Enumération DNS complète",
         "params": [
             {"key": "domain", "label": "Domain", "default": "", "hint": "example.com"},
         ],
         "build_cmd": lambda p: ["dnsrecon", "-d", p["domain"]],
     },
     {
-        "name": "Fierce",
-        "desc": "DNS subdomain scanner",
+        "name": "Host Lookup",
+        "desc": "Résolution DNS inverse d'une IP",
         "params": [
-            {"key": "domain", "label": "Domain", "default": "", "hint": "example.com"},
+            {"key": "ip", "label": "IP", "default": "", "hint": "192.168.1.1"},
         ],
-        "build_cmd": lambda p: ["fierce", "--domain", p["domain"]],
-    },
-    {
-        "name": "theHarvester",
-        "desc": "Email & subdomain OSINT",
-        "params": [
-            {"key": "domain", "label": "Domain",  "default": "", "hint": "example.com"},
-            {"key": "source", "label": "Source",  "default": "bing", "hint": "bing google duckduckgo"},
-            {"key": "limit",  "label": "Limit",   "default": "100",  "hint": ""},
-        ],
-        "build_cmd": lambda p: [
-            "theHarvester", "-d", p["domain"], "-b", p["source"], "-l", p["limit"]
-        ],
-    },
-    {
-        "name": "Nmap Script",
-        "desc": "Run specific NSE script",
-        "params": [
-            {"key": "target", "label": "Target",  "default": "",               "hint": ""},
-            {"key": "script", "label": "Script",  "default": "http-title",     "hint": ""},
-        ],
-        "build_cmd": lambda p: ["nmap", f"--script={p['script']}", p["target"]],
+        "build_cmd": lambda p: ["dig", "-x", p["ip"]],
     },
 ]
 
@@ -376,11 +388,11 @@ RECON_TOOLS = [
 CAPTURE_TOOLS = [
     {
         "name": "TCPDump",
-        "desc": "Live packet capture",
+        "desc": "Capture paquets en live",
         "params": [
-            {"key": "iface",  "label": "Interface", "default": "eth0",  "hint": "eth0 wlan0"},
-            {"key": "filter", "label": "Filter",    "default": "",      "hint": "port 80 / host x.x.x.x"},
-            {"key": "count",  "label": "Count",     "default": "100",   "hint": "packets (0=infinite)"},
+            {"key": "iface",  "label": "Interface", "default": "", "hint": "eth0 wlan0"},
+            {"key": "filter", "label": "Filtre",    "default": "", "hint": "port 80 / host x.x.x.x"},
+            {"key": "count",  "label": "Count",     "default": "100", "hint": "0 = infini"},
         ],
         "build_cmd": lambda p: (
             ["tcpdump", "-i", p["iface"], "-c", p["count"], "-nn"]
@@ -389,11 +401,11 @@ CAPTURE_TOOLS = [
     },
     {
         "name": "Tshark Capture",
-        "desc": "Wireshark CLI capture",
+        "desc": "Capture vers fichier PCAP",
         "params": [
-            {"key": "iface",  "label": "Interface", "default": "eth0", "hint": ""},
-            {"key": "count",  "label": "Count",     "default": "50",   "hint": ""},
-            {"key": "output", "label": "PCAP file", "default": "/tmp/capture.pcap", "hint": ""},
+            {"key": "iface",  "label": "Interface", "default": "", "hint": "eth0"},
+            {"key": "count",  "label": "Count",     "default": "100", "hint": ""},
+            {"key": "output", "label": "PCAP file", "default": "", "hint": "/tmp/capture.pcap"},
         ],
         "build_cmd": lambda p: [
             "tshark", "-i", p["iface"], "-c", p["count"], "-w", p["output"]
@@ -401,10 +413,10 @@ CAPTURE_TOOLS = [
     },
     {
         "name": "Tshark Read",
-        "desc": "Read & filter PCAP file",
+        "desc": "Lire et filtrer un fichier PCAP",
         "params": [
             {"key": "file",   "label": "PCAP file", "default": "/tmp/capture.pcap", "hint": ""},
-            {"key": "filter", "label": "Filter",    "default": "",                  "hint": "http / dns / tcp"},
+            {"key": "filter", "label": "Filtre",    "default": "",                  "hint": "http dns tcp"},
         ],
         "build_cmd": lambda p: (
             ["tshark", "-r", p["file"]]
@@ -412,25 +424,23 @@ CAPTURE_TOOLS = [
         ),
     },
     {
+        "name": "Netstat Ports",
+        "desc": "Ports ouverts locaux",
+        "params": [],
+        "build_cmd": lambda p: ["ss", "-tulpn"],
+    },
+    {
         "name": "Ngrep",
-        "desc": "Grep on network packets",
+        "desc": "Grep sur paquets réseau",
         "params": [
             {"key": "pattern", "label": "Pattern",   "default": "GET",  "hint": "regex"},
-            {"key": "iface",   "label": "Interface", "default": "eth0", "hint": ""},
+            {"key": "iface",   "label": "Interface", "default": "",     "hint": "eth0"},
         ],
         "build_cmd": lambda p: ["ngrep", "-d", p["iface"], p["pattern"]],
     },
     {
-        "name": "Responder",
-        "desc": "LLMNR/NBT-NS poisoner",
-        "params": [
-            {"key": "iface", "label": "Interface", "default": "eth0", "hint": ""},
-        ],
-        "build_cmd": lambda p: ["responder", "-I", p["iface"], "-rdw"],
-    },
-    {
         "name": "Netcat Listen",
-        "desc": "Open listening port",
+        "desc": "Ouvrir un port en écoute (reverse shell)",
         "params": [
             {"key": "port", "label": "Port", "default": "4444", "hint": ""},
         ],
@@ -438,10 +448,10 @@ CAPTURE_TOOLS = [
     },
     {
         "name": "Netcat Connect",
-        "desc": "Connect to remote host",
+        "desc": "Connexion TCP vers hôte distant",
         "params": [
             {"key": "host", "label": "Host", "default": "", "hint": ""},
-            {"key": "port", "label": "Port", "default": "",  "hint": ""},
+            {"key": "port", "label": "Port", "default": "", "hint": ""},
         ],
         "build_cmd": lambda p: ["nc", "-v", p["host"], p["port"]],
     },

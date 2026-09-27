@@ -363,80 +363,257 @@ Change `ARMBIAN_BRANCH` in `configs/config-default.conf`. Test one config with
 | Files système | `adnrpi-hackpad.service`, `adnrpi-hackpad.desktop`, `hackpad/adnrpi-switch-mode` |
 | Config build | `configs/adnrpi1-bookworm-pentest-server.conf` (`ADNRPI_PENTEST=yes`) |
 | Script install | `customize-image.sh → installPentestTools() + installHackPad()` |
-| Risk on upgrade | **Medium** — dépend de la compatibilité Kivy + SDL2 backend KMS |
+| Risk on upgrade | **Medium** — dépend de la compatibilité Kivy + SDL2 + Xorg sur le nouvel OS |
 
 ### Ce que ça fait
-Un OS de pentest complet démarrant en **mode serveur** (pas d'X11) avec une interface
-tactile Kivy sur le framebuffer KMS. Depuis l'interface, l'utilisateur peut basculer
-en **mode desktop** (XFCE + LightDM) via un bouton qui change la cible systemd et redémarre.
+Un OS de pentest complet avec une interface tactile Kivy sous **X11** (Xorg modesetting
++ Lima DRI3). Démarre automatiquement au boot via autologin root → `.bash_profile` →
+`startx`. Depuis l'interface, l'utilisateur peut basculer en mode desktop (XFCE).
 
-#### Architecture mode dual
+### Découverte critique — SDL2 KMS non disponible sur Debian Bookworm
 
-| Mode            | systemd default      | Service actif              |
-|-----------------|----------------------|----------------------------|
-| Server (défaut) | `multi-user.target`  | `adnrpi-hackpad.service`   |
-| Desktop         | `graphical.target`   | `lightdm.service`          |
+> **La libSDL2 Debian Bookworm (ARM) ne contient PAS le backend `kmsdrm`.**
+> `strings libSDL2-2.0.so.0 | grep -E "^(kmsdrm|fbdev)"` → vide.
+> Seuls `offscreen` et `wayland` sont compilés. `SDL_VIDEODRIVER=kmsdrm` tombe
+> silencieusement en mode `offscreen` (rendu en mémoire, écran noir).
+>
+> **Solution : utiliser Xorg** avec le driver `modesetting` (Lima DRI3, glamor).
 
-CLI helper : `adnrpi-switch-mode [server|desktop]`
-
-#### Outils pentesting installés
-
-`installPentestTools()` installe : nmap, masscan, aircrack-ng, nikto, sqlmap, gobuster,
-john, hydra, hashcat, dnsrecon, theHarvester, tcpdump, tshark, responder, netcat, curl, wget
-
-#### Structure de l'app Kivy (`/opt/adnrpi-hackpad/`)
+### Séquence de démarrage
 
 ```text
-main.py               — détecte framebuffer vs X11, SDL env vars
+boot
+ └─ getty@tty1 → autologin root  (/etc/systemd/system/getty@tty1.service.d/override.conf)
+     └─ /root/.bash_profile → startx -- :0 vt1 -nolisten tcp
+         └─ Xorg :0  (modesetting driver, 800×480 ou 1280×720 selon écran)
+             └─ /root/.xinitrc → python3 /opt/adnrpi-hackpad/main.py
+                 └─ HackPad Kivy (DISPLAY=:0, SDL2 X11 backend)
+```
+
+Fichiers de démarrage créés par `installHackPad()` :
+
+| Fichier | Contenu |
+|---------|---------|
+| `/etc/systemd/system/getty@tty1.service.d/override.conf` | `ExecStart=agetty --autologin root` |
+| `/root/.bash_profile` | `[[ $(tty) == /dev/tty1 ]] && exec startx -- :0 vt1` |
+| `/root/.xinitrc` | `xset s off -dpms && exec python3 /opt/adnrpi-hackpad/main.py` |
+
+### Polices emoji
+
+Les emoji dans l'app (grille catégories) utilisent `NotoColorEmoji.ttf` via markup Kivy :
+
+```python
+LabelBase.register("NotoEmoji", "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf")
+# Utilisation dans les widgets :
+text="[font=NotoEmoji][size=26]🌐[/size][/font]\n[size=18]Network[/size]"
+```
+
+> **Attention** : NotoColorEmoji est une police bitmap — `[size=X]` ne réduit pas
+> proportionnellement. Pour les petits boutons header, utiliser du texte Roboto (`"SET"`, `"MODE"`).
+
+### Apt packages requis dans `installHackPad()`
+
+```bash
+python3-kivy
+libsdl2-2.0-0 libsdl2-image-2.0-0 libsdl2-mixer-2.0-0 libsdl2-ttf-2.0-0
+libgles2 libgbm1 libegl-mesa0 libdrm2 libmtdev1
+xserver-xorg-core xserver-xorg-video-fbdev xserver-xorg-input-evdev xinit x11-xserver-utils
+fonts-noto fonts-noto-color-emoji fonts-dejavu-core
+xfce4 xfce4-terminal lightdm
+```
+
+> **Ne pas inclure** : `python3-kivymd` (absent des repos Debian), `libsdl2-*-dev` (headers build-time).
+
+### Structure de l'app Kivy (`/opt/adnrpi-hackpad/`)
+
+```text
+main.py               — config Kivy (800×480, fullscreen, keyboard_mode="")
+                        + LabelBase.register("NotoEmoji", ...)
 screens/
-  home.py             — grille 3×2 catégories avec boutons settings/mode
+  home.py             — grille 3×2 catégories, boutons SET/MODE texte
   category.py         — liste outils filtrée par catégorie (scroll 2 colonnes)
-  tool.py             — champs paramètres, RUN/STOP/CLEAR, output live via subprocess
-  settings.py         — IP cible, interface, wordlist, dossier output, sysinfo
+  tool.py             — champs tap-to-edit + pré-remplissage depuis settings,
+                        RUN/STOP/CLR, output live subprocess
+  settings.py         — 4 champs tap-to-edit (target_ip, interface, wordlist, output_dir)
   mode.py             — bascule server/desktop + reboot en 5 s
+  keyboard.py         — InputPopup partagé (clavier tactile + physique)
 tools/
-  registry.py         — 35 outils, 6 catégories
+  registry.py         — 41 outils, 6 catégories
 ```
 
-#### Registre d'outils (registry.py)
+### Clavier partagé (`screens/keyboard.py`)
 
-| Catégorie | Nombre | Exemples                                   |
-|-----------|--------|--------------------------------------------|
-| network   | 8      | nmap (ping/ports/full/vuln), masscan, netcat |
-| wifi      | 7      | airodump-ng, aireplay-ng, aircrack-ng      |
-| web       | 6      | nikto, sqlmap, gobuster, curl              |
-| passwords | 6      | hydra, john, hashcat                       |
-| recon     | 6      | dnsrecon, theHarvester, whois              |
-| capture   | 7      | tcpdump, tshark, responder                 |
+`InputPopup` est le composant central utilisé dans tous les écrans qui ont des champs
+de saisie. Il s'ouvre en popup au tap, ne perturbe pas le layout de fond.
 
-#### Service systemd
+Points critiques d'implémentation :
 
-```ini
-[Service]
-Environment=SDL_VIDEODRIVER=kmsdrm
-Environment=SDL_RENDERDRIVER=opengles2
-Environment=KIVY_WINDOW=sdl2
-Environment=KIVY_GL_BACKEND=sdl2
-Environment=DISPLAY=
-ExecStart=/usr/bin/python3 /opt/adnrpi-hackpad/main.py
-Restart=on-failure
-RestartSec=5
-WantedBy=multi-user.target
+- **`keyboard_mode=""`** dans `main.py` — empêche Kivy de tenter d'ouvrir un clavier
+  système (ce qui redimensionnerait la fenêtre et ferait descendre le header)
+- **`Window.bind(on_key_down=...)` dans `on_open`** (pas dans `__init__`) + délai 400 ms
+  via `Clock.schedule_once` — évite de capturer le tap d'ouverture comme saisie
+- **Debounce 150 ms** dans `_type()` — anti double-tap sur écran résistif
+- **`auto_dismiss=False`** — le popup ne se ferme pas en tapant à côté
+- **`on_dismiss` délie** toujours le handler — pas de fuites de bindings
+
+```python
+class InputPopup(Popup):
+    def on_open(self):
+        Clock.schedule_once(self._enable_keys, 0.4)   # grâce de 400 ms
+
+    def _enable_keys(self, dt):
+        self._keys_enabled = True
+        Window.bind(on_key_down=self._physical_key)
+
+    def _type(self, val):
+        now = time.monotonic()
+        if now - self._last_type < 0.15:              # anti double-tap
+            return
+        ...
+
+    def _physical_key(self, window, key, scancode, codepoint, modifiers):
+        if not self._keys_enabled:
+            return True                               # ignorer pendant la grâce
+        ...
+        return True                                   # consommer l'événement
 ```
 
-#### Paramètres sauvegardés
+`make_field_button(label, value, on_confirm, hint="")` — helper qui retourne un `Button`
+stylé sombre qui ouvre `InputPopup` au tap. Affiche le hint en gris quand vide.
+Utilisé dans `settings.py` et `tool.py`.
 
-`/etc/adnrpi-hackpad/settings.conf` — IP cible, interface réseau, wordlist, dossier output
+### Bug fix tool.py (Python 3 lambda + exception)
+
+```python
+# FAUX — Python 3 supprime `e` après le bloc except, le lambda plante
+except Exception as e:
+    Clock.schedule_once(lambda dt: self._append(f"[ERROR] {e}\n"), 0)
+
+# CORRECT — capturer avant le lambda
+except Exception as e:
+    err = str(e)
+    Clock.schedule_once(lambda dt, err=err: self._append(f"[ERROR] {err}\n"), 0)
+```
+
+### Clavier virtuel (settings.py) — popup custom
+
+Trois approches ont échoué avant de trouver la solution finale :
+
+| Approche | Problème |
+| --- | --- |
+| `keyboard_mode="dock"` (VKeyboard Kivy) | Focus TextInput perdu au `touch_up` → clavier disparaît immédiatement |
+| VKeyboard inline dans BoxLayout (`do_translation=False`) | Widget Scatter ne se rend pas dans un layout normal → clavier invisible |
+| Clavier custom permanent en bas de l'écran | Double entrée à chaque touche tactile |
+
+**Solution finale** : `InputPopup` — un `Popup` custom qui s'ouvre au tap sur un champ,
+avec son propre affichage de la valeur en cours + grille de boutons QWERTY.
+
+```python
+class InputPopup(Popup):
+    # Popup (size_hint 0.97×0.80) avec :
+    # - Label affichant la valeur + curseur "▌"
+    # - 4 rangées de lettres (GridLayout de Button)
+    # - Rangée symboles : . / - _ SPACE ⌫ OK✓
+    # - Window.bind(on_key_down=...) pour clavier physique simultané
+    # - Debounce 150 ms dans _type() contre le double-tap touchscreen
+
+    def _type(self, val):
+        now = time.monotonic()
+        if now - self._last_type < 0.15:   # anti double-tap résistif
+            return
+        self._last_type = now
+        ...
+
+    def _physical_key(self, window, key, scancode, codepoint, modifiers):
+        # key 8 = backspace, 13/271 = enter (confirm), 27 = escape (cancel)
+        # return True consomme l'événement pour ne pas l'envoyer aux widgets de fond
+        ...
+
+    def on_dismiss(self):
+        Window.unbind(on_key_down=self._physical_key)  # toujours nettoyer
+```
+
+Avantages de cette approche :
+
+- Aucun problème de focus — le TextInput de fond n'est jamais ciblé
+- Clavier physique + tactile simultanément
+- Popup `auto_dismiss=False` : ne se ferme pas accidentellement
+- `on_dismiss` délie toujours le handler physique (pas de fuites)
+
+Les champs settings sont des `Button` (non des `TextInput`) stylés en sombre — le tap
+ouvre le popup, la valeur confirmée est réécrite dans `self._values[key]` et
+affichée dans le bouton.
+
+### Registre d'outils (registry.py)
+
+41 outils au total, 6 catégories. Les champs `target`, `iface`, `wordlist`, `output` sont
+pré-remplis automatiquement depuis `/etc/adnrpi-hackpad/settings.conf` si la valeur par
+défaut est vide.
+
+| Catégorie | # | Contenu |
+| --- | --- | --- |
+| network | 12 | ping, arp-scan, arp -a, nmap (quick/full/os/vuln/script), masscan, traceroute, netdiscover, port-check |
+| wifi | 6 | workflow numéroté : 1.airmon start → 2.airodump scan → 3.airodump capture → 4.aireplay deauth → 5.aircrack → 6.airmon stop |
+| web | 5 | curl headers, nikto, gobuster dir/dns, sqlmap |
+| passwords | 7 | hashid, john, hydra ssh/ftp/http, smbclient, crunch |
+| recon | 4 | whois, dig (+ reverse), dnsrecon, host lookup (dig -x) |
+| capture | 7 | tcpdump, tshark capture/read, netstat (ss -tulpn), ngrep, nc listen/connect |
+
+Outils retirés car non disponibles sur Debian Bookworm ARM :
+`wifite`, `whatweb`, `enum4linux`, `fierce`, `theHarvester`, `responder`,
+`kismet`, `reaver`, `bully`, `hashcat`, `medusa`, `wireshark`, `ettercap`, `metasploit`.
+
+**Outils apt requis** (voir `installPentestTools()` dans `customize-image.sh`) :
+
+```bash
+apt-get install -y nmap masscan netdiscover arp-scan net-tools traceroute whois dnsutils \
+  aircrack-ng iw rfkill \
+  nikto sqlmap gobuster dirb curl wget \
+  john hydra crunch smbclient dnsrecon \
+  tcpdump tshark ngrep netcat-traditional socat \
+  xsel python3-pip
+pip3 install hashid
+# Wordlists (Kali 'wordlists' package absent — téléchargement manuel) :
+mkdir -p /usr/share/wordlists
+ln -sf /usr/share/dirb/wordlists/common.txt /usr/share/wordlists/common.txt
+curl -L ".../rockyou-75.txt" -o /usr/share/wordlists/rockyou.txt
+```
+
+**Wordlists** — `/usr/share/wordlists/` n'existe pas sur Debian (package Kali uniquement).
+Le script crée ce dossier et télécharge `rockyou.txt` (59k mots, SecLists).
+Defaults dans le registry : Hydra/John/Aircrack → `rockyou.txt` ; Gobuster → `common.txt`.
+
+**Workflow WiFi** : les outils sont numérotés 1→6 dans l'ordre d'utilisation pour une
+attaque WPA. L'utilisateur suit les étapes dans l'ordre depuis la liste de la catégorie.
+
+**Note adaptateur WiFi RTL8188EUS** (`rtl8xxxu` driver) : contrairement aux chipsets Atheros,
+ce driver n'ajoute **pas** le suffixe `mon` à l'interface. Après `airmon-ng start wlx...`,
+l'interface garde le même nom `wlx40a5ef1333f3` en mode monitor.
+`1. Airmon Start` exécute `airmon-ng check kill && airmon-ng start <iface>` pour tuer
+NetworkManager/wpa_supplicant avant de démarrer le mode monitor.
+
+### Pré-remplissage intelligent des paramètres
+
+`tool.py` lit `settings.conf` à chaque ouverture d'outil et pré-remplit :
+
+| Clé param | Depuis settings | Exemple |
+| --- | --- | --- |
+| `target` / `host` | `target_ip` | 192.168.1.1 |
+| `iface` | `interface` | eth0 |
+| `wordlist` | `wordlist` | /usr/share/wordlists/rockyou.txt |
+| `output` | `output_dir` + nom outil | /tmp/nmap_quick |
+
+Les champs vides affichent le hint en gris (ex: `192.168.1.0/24`) pour guider l'utilisateur.
 
 ### Vérification après upgrade
 
-- `python3 -c "import kivy"` — Kivy s'installe correctement sur le nouvel OS
-- `SDL_VIDEODRIVER=kmsdrm python3 -c "import kivy"` — backend KMS détecté sans erreur
-- Lima / GLES2 toujours fonctionnel sur H3 (`/dev/dri/card0` présent, `dmesg | grep lima`)
-- `systemctl status adnrpi-hackpad` — service démarre en mode server
-- Bascule mode Desktop dans l'app → `graphical.target` → LightDM démarre bien au reboot
-- `adnrpi-switch-mode server` → revient en mode Kivy au reboot
-- Tous les outils pentesting disponibles dans les dépôts APT du nouvel OS
+- `strings /usr/lib/arm-linux-gnueabihf/libSDL2-2.0.so.0 | grep kmsdrm` → vide = normal, utiliser Xorg
+- `which Xorg && Xorg -version` — Xorg installé
+- `ls /root/.bash_profile /root/.xinitrc` — fichiers autostart présents
+- `systemctl is-enabled getty@tty1` + vérif override autologin
+- `which nmap arp-scan aircrack-ng hydra hashid gobuster` — outils pentest installés
+- `ls /usr/share/wordlists/rockyou.txt /usr/share/dirb/wordlists/common.txt` — wordlists présentes
+- Démarrage hardware : boot → écran HackPad en ≤ 30 s
 
 ---
 

@@ -29,7 +29,7 @@ class ModeScreen(Screen):
                     size=lambda i, v: setattr(rect, "size", v))
 
         btn_back = Button(
-            text="◀", font_size="20sp",
+            text="<", font_size="22sp",
             size_hint=(None, None), size=(50, 40),
             background_color=(0.2, 0.2, 0.2, 1)
         )
@@ -43,7 +43,7 @@ class ModeScreen(Screen):
 
         # ── Current mode ──────────────────────────────────────────────────────
         target = _current_target()
-        mode_txt = "🖥  Desktop (graphical)" if "graphical" in target else "⌨  Server (console)"
+        mode_txt = "[PC] Desktop (graphical)" if "graphical" in target else "[CLI] Server (console)"
         self._status = Label(
             text=f"Current mode: {mode_txt}",
             font_size="15sp", color=(0.7, 0.7, 0.7, 1),
@@ -54,7 +54,7 @@ class ModeScreen(Screen):
         body = BoxLayout(orientation="vertical", spacing=16, padding=(20, 20))
 
         btn_server = Button(
-            text="⌨  Server Mode\n[size=12]Kivy on framebuffer — no X11 needed[/size]",
+            text=">> Server Mode\n[size=12]Console — pas d'interface graphique[/size]",
             markup=True, font_size="16sp",
             size_hint_y=None, height=90,
             background_color=(0.10, 0.35, 0.10, 1), background_normal=""
@@ -62,7 +62,7 @@ class ModeScreen(Screen):
         btn_server.bind(on_press=self._set_server)
 
         btn_desktop = Button(
-            text="🖥  Desktop Mode\n[size=12]XFCE + HackPad in X11 window[/size]",
+            text="[PC] Desktop Mode\n[size=12]XFCE + HackPad en fenetre X11[/size]",
             markup=True, font_size="16sp",
             size_hint_y=None, height=90,
             background_color=(0.10, 0.25, 0.50, 1), background_normal=""

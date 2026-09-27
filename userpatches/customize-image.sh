@@ -429,46 +429,57 @@ installFirstBootConfig() {
 installPentestTools() {
     echo "Installing pentest tools ..."
 
+    # Packages verified on Debian Bookworm ARM (Allwinner H3)
+    # Removed (not in Debian repos): wordlists, kismet, reaver, bully, whatweb, wfuzz,
+    #   hashcat, medusa, fierce, theharvester, maltego, recon-ng, wireshark,
+    #   ettercap-text-only, responder, metasploit-framework, exploitdb, beef-xss
+
     apt-get update
 
     # Network scanning
     apt-get install -y --no-install-recommends \
-        nmap masscan netdiscover arp-scan nbtscan \
+        nmap masscan netdiscover arp-scan \
         net-tools iputils-ping traceroute whois dnsutils
 
-    # WiFi
+    # WiFi (aircrack-ng suite — mode monitor via mac80211, no extra driver needed)
     apt-get install -y --no-install-recommends \
-        aircrack-ng kismet reaver bully hostapd iw rfkill
+        aircrack-ng iw rfkill
 
     # Web
     apt-get install -y --no-install-recommends \
-        nikto sqlmap gobuster dirb curl wget \
-        whatweb wfuzz
+        nikto sqlmap gobuster dirb curl wget
 
     # Passwords & hashes
     apt-get install -y --no-install-recommends \
-        john hydra hashcat crunch wordlists \
-        medusa
+        john hydra crunch smbclient
 
-    # Recon & OSINT
+    # Recon
     apt-get install -y --no-install-recommends \
-        dnsrecon fierce theharvester maltego \
-        recon-ng
+        dnsrecon
 
     # Capture & analysis
     apt-get install -y --no-install-recommends \
-        tcpdump tshark wireshark ngrep ettercap-text-only \
-        netcat-openbsd socat responder
+        tcpdump tshark ngrep netcat-traditional socat
 
-    # Exploitation
-    apt-get install -y --no-install-recommends \
-        metasploit-framework exploitdb \
-        beef-xss
+    # Kivy clipboard dependency
+    apt-get install -y --no-install-recommends xsel
 
     # Utilities
     apt-get install -y --no-install-recommends \
-        python3 python3-pip git vim tmux screen \
-        openssh-server ufw
+        python3 python3-pip git vim tmux screen openssh-server ufw
+
+    # hashid — pip only (not in Debian repos)
+    pip3 install hashid
+
+    # Wordlists — Debian Bookworm has no 'wordlists' package (Kali-specific)
+    mkdir -p /usr/share/wordlists
+    ln -sf /usr/share/dirb/wordlists/common.txt /usr/share/wordlists/common.txt
+    if [ ! -f /usr/share/wordlists/rockyou.txt ]; then
+        curl -L --max-time 120 \
+            "https://github.com/danielmiessler/SecLists/raw/master/Passwords/Leaked-Databases/rockyou-75.txt" \
+            -o /usr/share/wordlists/rockyou.txt || \
+            echo "WARNING: rockyou.txt download failed — add manually"
+    fi
 
     echo "Installing pentest tools ... [DONE]"
 }
@@ -483,7 +494,7 @@ installHackPad() {
     apt-get install -y --no-install-recommends \
         python3-kivy \
         libsdl2-2.0-0 libsdl2-image-2.0-0 libsdl2-mixer-2.0-0 libsdl2-ttf-2.0-0 \
-        libgles2 libgbm1 libegl-mesa0 libdrm2 \
+        libgles2 libgbm1 libegl-mesa0 libdrm2 libmtdev1 \
         xfce4 xfce4-terminal lightdm \
         fonts-dejavu-core
 

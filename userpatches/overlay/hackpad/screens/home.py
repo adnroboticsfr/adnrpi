@@ -21,7 +21,7 @@ class HomeScreen(Screen):
         root = BoxLayout(orientation="vertical", spacing=0)
 
         # ── Header ───────────────────────────────────────────────────────────
-        header = BoxLayout(size_hint_y=None, height=48, padding=(10, 4))
+        header = BoxLayout(size_hint_y=None, height=52, padding=(10, 4), spacing=8)
         with header.canvas.before:
             Color(0.05, 0.05, 0.05, 1)
             self._header_rect = Rectangle(pos=header.pos, size=header.size)
@@ -34,15 +34,15 @@ class HomeScreen(Screen):
         ))
 
         btn_settings = Button(
-            text="⚙", font_size="22sp",
-            size_hint=(None, None), size=(48, 40),
+            text="SET", font_size="14sp",
+            size_hint=(None, None), size=(58, 40),
             background_color=(0.15, 0.15, 0.15, 1)
         )
         btn_settings.bind(on_press=lambda *a: setattr(self.manager, "current", "settings"))
 
         btn_mode = Button(
-            text="🖥", font_size="22sp",
-            size_hint=(None, None), size=(48, 40),
+            text="MODE", font_size="14sp",
+            size_hint=(None, None), size=(68, 40),
             background_color=(0.15, 0.15, 0.15, 1)
         )
         btn_mode.bind(on_press=lambda *a: setattr(self.manager, "current", "mode"))
@@ -54,8 +54,8 @@ class HomeScreen(Screen):
         grid = GridLayout(cols=3, rows=2, spacing=6, padding=6)
         for cat in CATEGORIES:
             btn = Button(
-                text=f"{cat['icon']}\n{cat['label']}",
-                markup=False,
+                text=f"[font=NotoEmoji][size=26]{cat['icon']}[/size][/font]\n[size=18]{cat['label']}[/size]",
+                markup=True,
                 font_size="16sp",
                 halign="center",
                 background_color=cat["color"],

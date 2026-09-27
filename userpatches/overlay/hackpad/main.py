@@ -19,11 +19,18 @@ Config.set("graphics", "height", "480")
 Config.set("graphics", "fullscreen", "auto")
 Config.set("kivy", "log_level", "warning")
 Config.set("input", "mouse", "mouse,disable_multitouch")
+Config.set("kivy", "keyboard_mode", "")
 
 from kivy.app import App
 from kivy.uix.screenmanager import ScreenManager, SlideTransition
 from kivy.lang import Builder
 from kivy.core.window import Window
+from kivy.core.text import LabelBase
+
+_EMOJI_FONT = "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf"
+import os as _os
+if _os.path.exists(_EMOJI_FONT):
+    LabelBase.register("NotoEmoji", _EMOJI_FONT)
 
 from screens.home     import HomeScreen
 from screens.category import CategoryScreen

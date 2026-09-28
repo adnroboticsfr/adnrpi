@@ -10,8 +10,9 @@ WorkingDirectory=/opt/adnrpi-hackpad
 Environment=HOME=/root
 # Supprimer un éventuel verrou Xorg résiduel
 ExecStartPre=/bin/sh -c 'rm -f /tmp/.X0-lock /tmp/.X11-unix/X0'
-# xinit lance Xorg sur :0/vt1 puis exécute HackPad comme client X
-ExecStart=/usr/bin/xinit /usr/bin/python3 /opt/adnrpi-hackpad/main.py \
+# xinit lance Xorg sur :0/vt1 puis le wrapper launch.sh force 800x480 via xrandr
+# avant de démarrer Kivy — évite que modesetting choisisse 1280x720 depuis EDID
+ExecStart=/usr/bin/xinit /opt/adnrpi-hackpad/launch.sh \
     -- :0 vt1 -nolisten tcp
 Restart=on-failure
 RestartSec=5

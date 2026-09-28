@@ -513,11 +513,16 @@ installHackPad() {
 
     systemctl disable lightdm 2>/dev/null || true
 
+    # ── Xorg config — force 800x480, évite que modesetting choisisse 1280x720 ────
+    mkdir -p /etc/X11/xorg.conf.d
+    cp -v /tmp/overlay/99-adnrpi-hackpad.conf /etc/X11/xorg.conf.d/
+
     # ── Application HackPad ───────────────────────────────────────────────────────
     local appdir="/opt/adnrpi-hackpad"
     mkdir -p "${appdir}"
     cp -rv /tmp/overlay/hackpad/* "${appdir}/"
     chmod +x "${appdir}/main.py"
+    chmod +x "${appdir}/launch.sh"
     chmod +x "${appdir}/adnrpi-switch-mode"
 
     # Global launcher

@@ -383,20 +383,49 @@ Un OS de pentest complet avec une interface tactile Kivy sous **X11** (Xorg mode
 
 ```text
 boot
- └─ getty@tty1 → autologin root  (/etc/systemd/system/getty@tty1.service.d/override.conf)
-     └─ /root/.bash_profile → startx -- :0 vt1 -nolisten tcp
-         └─ Xorg :0  (modesetting driver, 800×480 ou 1280×720 selon écran)
-             └─ /root/.xinitrc → python3 /opt/adnrpi-hackpad/main.py
-                 └─ HackPad Kivy (DISPLAY=:0, SDL2 X11 backend)
+ └─ systemd → adnrpi-hackpad.service (multi-user.target)
+     └─ xinit launch.sh -- :0 vt1 -nolisten tcp
+         └─ Xorg :0  (modesetting driver, Lima DRI3)
+             └─ launch.sh → xrandr force 800×480 → python3 main.py
+                 └─ HackPad Kivy (DISPLAY=:0, SDL2 X11 backend, borderless 800×480)
 ```
 
-Fichiers de démarrage créés par `installHackPad()` :
+Fichiers de démarrage :
 
-| Fichier | Contenu |
-|---------|---------|
-| `/etc/systemd/system/getty@tty1.service.d/override.conf` | `ExecStart=agetty --autologin root` |
-| `/root/.bash_profile` | `[[ $(tty) == /dev/tty1 ]] && exec startx -- :0 vt1` |
-| `/root/.xinitrc` | `xset s off -dpms && exec python3 /opt/adnrpi-hackpad/main.py` |
+| Fichier | Rôle |
+|---------|------|
+| `/etc/systemd/system/adnrpi-hackpad.service` | Service systemd — `xinit launch.sh -- :0 vt1` |
+| `/opt/adnrpi-hackpad/launch.sh` | Force 800×480 via xrandr, lance python3 main.py |
+| `/etc/X11/xorg.conf.d/99-adnrpi-hackpad.conf` | Xorg config — force PreferredMode 800×480 sur HDMI-1 |
+
+### Résolution HDMI forcée à 800×480
+
+Le driver `modesetting` (Lima/H3) peut sélectionner 1280×720 depuis l'EDID sur
+un reboot froid ou si le câble HDMI est reconnecté. Double protection :
+
+1. **Xorg config** (`/etc/X11/xorg.conf.d/99-adnrpi-hackpad.conf`) :
+   ```
+   Section "Monitor"
+       Identifier "HDMI-1"
+       Option "PreferredMode" "800x480"
+   EndSection
+   ```
+
+2. **`launch.sh`** — détecte le premier output connecté et force 800×480 via
+   `xrandr --output HDMI-1 --mode 800x480` avant de lancer Kivy.
+   Survit si l'Xorg config seule ne suffit pas (EDID inattendu).
+
+### Fenêtre Kivy fixe 800×480
+
+```python
+Config.set("graphics", "fullscreen", "0")
+Config.set("graphics", "borderless", "1")
+Config.set("graphics", "position",   "custom")
+Config.set("graphics", "left",       "0")
+Config.set("graphics", "top",        "0")
+```
+`fullscreen=auto` causait un resize 1 s après le démarrage (Kivy re-queryait
+la résolution de l'écran). `borderless=1` + taille fixe évite tout redimensionnement.
 
 ### Polices emoji
 

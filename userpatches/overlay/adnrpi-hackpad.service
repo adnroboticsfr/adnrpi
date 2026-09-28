@@ -1,19 +1,18 @@
 [Unit]
-Description=ADNRPi HackPad touchscreen interface
-After=systemd-udevd.service adnrpipad-console-rotate.service
-Wants=adnrpipad-console-rotate.service
+Description=ADNRPi HackPad — interface Kivy sous Xorg (tty1)
+After=systemd-udevd.service local-fs.target
+ConditionPathExists=/opt/adnrpi-hackpad/main.py
 
 [Service]
 Type=simple
 User=root
 WorkingDirectory=/opt/adnrpi-hackpad
-Environment=SDL_VIDEODRIVER=kmsdrm
-Environment=KIVY_WINDOW=sdl2
-Environment=KIVY_GL_BACKEND=sdl2
-Environment=DISPLAY=
-# Wait for DRM device (Lima GPU) to be ready before launching Kivy
-ExecStartPre=/bin/sh -c 'i=0; while [ ! -e /dev/dri/card0 ] && [ $i -lt 20 ]; do sleep 1; i=$((i+1)); done'
-ExecStart=/usr/bin/python3 /opt/adnrpi-hackpad/main.py
+Environment=HOME=/root
+# Supprimer un éventuel verrou Xorg résiduel
+ExecStartPre=/bin/sh -c 'rm -f /tmp/.X0-lock /tmp/.X11-unix/X0'
+# xinit lance Xorg sur :0/vt1 puis exécute HackPad comme client X
+ExecStart=/usr/bin/xinit /usr/bin/python3 /opt/adnrpi-hackpad/main.py \
+    -- :0 vt1 -nolisten tcp
 Restart=on-failure
 RestartSec=5
 

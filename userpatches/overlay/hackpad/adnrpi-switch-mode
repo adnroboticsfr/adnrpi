@@ -1,23 +1,28 @@
 #!/bin/bash
-# Switch between server mode (Kivy/framebuffer) and desktop mode (XFCE/X11)
+# Switch entre server mode (HackPad/Xorg via service) et desktop mode (XFCE/LightDM)
 # Usage: adnrpi-switch-mode [server|desktop]
 
 case "${1:-}" in
     server)
-        systemctl set-default multi-user.target
         systemctl disable lightdm 2>/dev/null || true
         systemctl enable adnrpi-hackpad 2>/dev/null || true
+        systemctl set-default multi-user.target
         echo "Server mode set — reboot to apply."
         ;;
     desktop)
-        systemctl set-default graphical.target
-        systemctl enable lightdm 2>/dev/null || true
         systemctl disable adnrpi-hackpad 2>/dev/null || true
+        systemctl enable lightdm 2>/dev/null || true
+        systemctl set-default graphical.target
         echo "Desktop mode set — reboot to apply."
         ;;
+    status)
+        svc=$(systemctl is-active adnrpi-hackpad 2>/dev/null)
+        ldm=$(systemctl is-active lightdm 2>/dev/null)
+        echo "adnrpi-hackpad : ${svc}"
+        echo "lightdm        : ${ldm}"
+        echo "default target : $(systemctl get-default 2>/dev/null)"
+        ;;
     *)
-        current=$(systemctl get-default 2>/dev/null)
-        echo "Current target: ${current}"
-        echo "Usage: adnrpi-switch-mode [server|desktop]"
+        echo "Usage: adnrpi-switch-mode [server|desktop|status]"
         ;;
 esac

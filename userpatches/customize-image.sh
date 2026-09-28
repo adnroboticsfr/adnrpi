@@ -487,21 +487,32 @@ installPentestTools() {
 installHackPad() {
     echo "Installing HackPad (Kivy touchscreen interface) ..."
 
-    # Kivy + XFCE dependencies
-    # python3-kivymd is NOT in Debian repos — omitted intentionally (not used by HackPad)
-    # libsdl2-*-dev are build-time headers — not needed at runtime
-    # libgbm1 + libegl-mesa0 are required for SDL2 KMS/DRM backend (Lima GPU on H3)
+    # ── Kivy + SDL2 runtime (X11 backend — kmsdrm absent de Debian Bookworm ARM) ──
+    # python3-kivymd : absent des repos Debian — non utilisé
+    # libsdl2-*-dev  : headers build-time — pas nécessaires à l'exécution
     apt-get install -y --no-install-recommends \
         python3-kivy \
         libsdl2-2.0-0 libsdl2-image-2.0-0 libsdl2-mixer-2.0-0 libsdl2-ttf-2.0-0 \
-        libgles2 libgbm1 libegl-mesa0 libdrm2 libmtdev1 \
-        xfce4 xfce4-terminal lightdm \
-        fonts-dejavu-core
+        libgles2 libgbm1 libegl-mesa0 libdrm2 libmtdev1
 
-    # Disable LightDM by default — server mode uses KMS/framebuffer
+    # ── Xorg (backend SDL2 fonctionnel sur Bookworm ARM via modesetting + Lima) ──
+    apt-get install -y --no-install-recommends \
+        xserver-xorg-core xserver-xorg-video-fbdev \
+        xserver-xorg-input-evdev xserver-xorg-input-libinput \
+        xinit x11-xserver-utils
+
+    # ── Polices + clipboard Kivy ──────────────────────────────────────────────────
+    apt-get install -y --no-install-recommends \
+        fonts-noto fonts-noto-color-emoji fonts-dejavu-core \
+        xsel
+
+    # ── XFCE (mode desktop optionnel) ────────────────────────────────────────────
+    apt-get install -y --no-install-recommends \
+        xfce4 xfce4-terminal lightdm
+
     systemctl disable lightdm 2>/dev/null || true
 
-    # Install HackPad application
+    # ── Application HackPad ───────────────────────────────────────────────────────
     local appdir="/opt/adnrpi-hackpad"
     mkdir -p "${appdir}"
     cp -rv /tmp/overlay/hackpad/* "${appdir}/"
@@ -511,12 +522,21 @@ installHackPad() {
     # Global launcher
     ln -sf "${appdir}/adnrpi-switch-mode" /usr/local/bin/adnrpi-switch-mode
 
-    # Systemd service — auto-start HackPad on framebuffer at boot
+    # ── Service systemd — xinit :0 vt1 → Xorg → HackPad ─────────────────────────
     cp -v /tmp/overlay/adnrpi-hackpad.service /etc/systemd/system/
     chmod 644 /etc/systemd/system/adnrpi-hackpad.service
     systemctl enable adnrpi-hackpad.service
 
-    # Desktop shortcut for XFCE mode
+    # ── Config par défaut (pré-remplie dans les outils) ──────────────────────────
+    mkdir -p /etc/adnrpi-hackpad
+    cat > /etc/adnrpi-hackpad/settings.conf <<'CONF'
+target_ip=
+interface=eth0
+wordlist=/usr/share/wordlists/rockyou.txt
+output_dir=/tmp
+CONF
+
+    # ── Raccourci desktop XFCE ───────────────────────────────────────────────────
     mkdir -p /usr/share/applications
     cp -v /tmp/overlay/adnrpi-hackpad.desktop /usr/share/applications/
     chmod 644 /usr/share/applications/adnrpi-hackpad.desktop

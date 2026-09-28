@@ -92,6 +92,18 @@ runs:
           exit 0
         fi
 
+    - name: Create build variant markers
+      shell: bash
+      run: |
+        # ADNRPI_PENTEST n'est pas transmis au chroot customize-image.sh par Armbian
+        # (seuls RELEASE/LINUXFAMILY/BOARD/BUILD_DESKTOP/BUILD_MINIMAL sont passés).
+        # On crée un fichier marqueur dans l'overlay que customize-image.sh peut lire.
+        source ./build/userpatches/config-settings.conf 2>/dev/null || true
+        if [[ "${ADNRPI_PENTEST}" == "yes" ]]; then
+          echo "[marker] ADNRPI_PENTEST=yes → création overlay/.adnrpi-pentest"
+          touch ./build/userpatches/overlay/.adnrpi-pentest
+        fi
+
     - name: sed VERSION
       shell: bash
       run: |

@@ -56,7 +56,10 @@ Main() {
                     ;;
                 ros1) installROS1Noetic ;;
             esac
-            if [[ "${ADNRPI_PENTEST}" == "yes" ]]; then
+            # ADNRPI_PENTEST n'est pas transmis au chroot par Armbian (seuls
+            # RELEASE/LINUXFAMILY/BOARD/BUILD_DESKTOP sont passés en args).
+            # action.yml crée /tmp/overlay/.adnrpi-pentest avant le build.
+            if [[ "${ADNRPI_PENTEST}" == "yes" ]] || [[ -f /tmp/overlay/.adnrpi-pentest ]]; then
                 installPentestTools
                 installHackPad
             fi

@@ -44,11 +44,11 @@ if [ "$PREFERRED" = "${SMALL_W}x${SMALL_H}" ]; then
     export HACKPAD_H=${SMALL_H}
 else
     # ── Moniteur externe (préféré ≠ 800x480) ───────────────────────────────
-    # Laisser la résolution native — on lit la taille réelle pour Kivy
-    NATIVE=$(echo "$PREFERRED" | tr 'x' ' ')
-    W=$(echo "$NATIVE" | awk '{print $1}')
-    H=$(echo "$NATIVE" | awk '{print $2}')
-    echo "[launch] moniteur externe détecté (${PREFERRED}), Kivy s'adapte"
+    # Utilise CURRENT (résolution active) en priorité, puis PREFERRED, puis 800x480
+    BEST="${CURRENT:-${PREFERRED}}"
+    W=$(echo "$BEST" | awk -F'x' '{print $1}')
+    H=$(echo "$BEST" | awk -F'x' '{print $2}')
+    echo "[launch] moniteur externe détecté (current=${CURRENT} preferred=${PREFERRED}), Kivy ${W}x${H}"
     export HACKPAD_W=${W:-800}
     export HACKPAD_H=${H:-480}
 fi

@@ -537,6 +537,43 @@ wordlist=/usr/share/wordlists/rockyou.txt
 output_dir=/tmp
 CONF
 
+    # ── Config Kivy pré-générée — évite le "upgrading config" au premier démarrage ──
+    # Sans ce fichier, Kivy v2.1 réécrit sa config au premier lancement et peut
+    # provoquer un resize de fenêtre si la résolution détectée diffère du défaut.
+    mkdir -p /root/.kivy/logs
+    cat > /root/.kivy/config.ini <<'KIVYCONF'
+[kivy]
+log_level = warning
+log_enable = 1
+log_dir = /root/.kivy/logs
+log_name = kivy_%y-%m-%d_%_.txt
+log_maxfiles = 5
+keyboard_mode =
+
+[graphics]
+width = 800
+height = 480
+fullscreen = 0
+borderless = 1
+position = custom
+left = 0
+top = 0
+minimum_width = 0
+minimum_height = 0
+show_cursor = 0
+
+[input]
+mouse = mouse,disable_multitouch
+
+[postproc]
+double_tap_time = 250
+double_tap_distance = 20
+
+[widgets]
+scroll_timeout = 55
+scroll_distance = 10
+KIVYCONF
+
     # ── Raccourci desktop XFCE ───────────────────────────────────────────────────
     mkdir -p /usr/share/applications
     cp -v /tmp/overlay/adnrpi-hackpad.desktop /usr/share/applications/

@@ -14,12 +14,16 @@ if "DISPLAY" not in os.environ and "WAYLAND_DISPLAY" not in os.environ:
     os.environ.setdefault("KIVY_GL_BACKEND", "sdl2")
 
 from kivy.config import Config
-Config.set("graphics", "width",  "800")
-Config.set("graphics", "height", "480")
-Config.set("graphics", "fullscreen", "auto")
-Config.set("kivy", "log_level", "warning")
-Config.set("input", "mouse", "mouse,disable_multitouch")
-Config.set("kivy", "keyboard_mode", "")
+Config.set("graphics", "width",      "800")
+Config.set("graphics", "height",     "480")
+Config.set("graphics", "fullscreen", "0")
+Config.set("graphics", "borderless", "1")
+Config.set("graphics", "position",   "custom")
+Config.set("graphics", "left",       "0")
+Config.set("graphics", "top",        "0")
+Config.set("kivy",     "log_level",  "warning")
+Config.set("input",    "mouse",      "mouse,disable_multitouch")
+Config.set("kivy",     "keyboard_mode", "")
 
 from kivy.app import App
 from kivy.uix.screenmanager import ScreenManager, SlideTransition

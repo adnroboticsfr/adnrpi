@@ -11,17 +11,34 @@ from screens.keyboard import make_field_button
 SETTINGS_FILE = "/etc/adnrpi-hackpad/settings.conf"
 
 FIELDS = [
-    ("Target IP",  "target_ip",  "192.168.1.1",                          False),
-    ("Interface",  "interface",  "eth0",                                  False),
-    ("Wordlist",   "wordlist",   "/usr/share/wordlists/rockyou.txt",      False),
-    ("Output dir", "output_dir", "/tmp",                                  False),
+    ("Target IP",  "target_ip",  "192.168.1.1",                      False),
+    ("Interface",  "interface",  "eth0",                              False),
+    ("Wordlist",   "wordlist",   "/usr/share/wordlists/rockyou.txt",  False),
+    ("Output dir", "output_dir", "/tmp",                              False),
 ]
+
+
+def _load_settings():
+    s = {}
+    try:
+        with open(SETTINGS_FILE) as f:
+            for line in f:
+                line = line.strip()
+                if "=" in line:
+                    k, _, v = line.partition("=")
+                    s[k.strip()] = v.strip()
+    except Exception:
+        pass
+    return s
 
 
 class SettingsScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._values = {key: default for _, key, default, _ in FIELDS}
+
+        # Charger les valeurs persistées — sinon les defaults
+        saved = _load_settings()
+        self._values = {key: saved.get(key, default) for _, key, default, _ in FIELDS}
         self._btns = {}
 
         root = BoxLayout(orientation="vertical", spacing=4)
@@ -47,7 +64,7 @@ class SettingsScreen(Screen):
             halign="left", valign="middle",
         ))
 
-        # ── Champs ───────────────────────────────────────────────────────────
+        # ── Champs (valeurs depuis settings.conf au démarrage) ────────────────
         fields_box = GridLayout(
             cols=2, spacing=3, padding=(10, 6),
             size_hint_y=None, height=len(FIELDS) * 56,
@@ -66,15 +83,15 @@ class SettingsScreen(Screen):
                     self._values[k] = val
                 return confirm
 
-            btn = make_field_button(label_txt, default, _make_confirm(key),
-                                    height=52, password=pwd)
+            current_val = self._values[key]
+            btn = make_field_button(label_txt, current_val, _make_confirm(key),
+                                    height=52, password=pwd, hint=default)
             self._btns[key] = btn
             fields_box.add_widget(btn)
 
         # ── Sauvegarder ───────────────────────────────────────────────────────
         btn_save = Button(
-            text="[font=NotoEmoji]💾[/font]  Save", markup=True,
-            font_size="15sp",
+            text="Save", font_size="15sp",
             size_hint_y=None, height=50,
             background_color=(0.10, 0.45, 0.10, 1),
             background_normal="",
@@ -91,3 +108,5 @@ class SettingsScreen(Screen):
         with open(SETTINGS_FILE, "w") as f:
             for _, key, _, _ in FIELDS:
                 f.write(f"{key}={self._values[key]}\n")
+            f.flush()
+            os.fsync(f.fileno())   # force écriture disque — survit à une coupure

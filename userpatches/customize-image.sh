@@ -469,7 +469,8 @@ installPentestTools() {
         python3 python3-pip git vim tmux screen openssh-server ufw
 
     # hashid — pip only (not in Debian repos)
-    pip3 install hashid
+    # --break-system-packages requis sur Debian 12 (PEP 668)
+    pip3 install hashid --break-system-packages
 
     # Wordlists — Debian Bookworm has no 'wordlists' package (Kali-specific)
     mkdir -p /usr/share/wordlists

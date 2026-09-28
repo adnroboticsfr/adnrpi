@@ -398,34 +398,27 @@ Fichiers de démarrage :
 | `/opt/adnrpi-hackpad/launch.sh` | Force 800×480 via xrandr, lance python3 main.py |
 | `/etc/X11/xorg.conf.d/99-adnrpi-hackpad.conf` | Xorg config — force PreferredMode 800×480 sur HDMI-1 |
 
-### Résolution HDMI forcée à 800×480
+### Détection d'écran et résolution (launch.sh)
 
-Le driver `modesetting` (Lima/H3) peut sélectionner 1280×720 depuis l'EDID sur
-un reboot froid ou si le câble HDMI est reconnecté. Double protection :
+`launch.sh` interroge `xrandr` pour identifier l'écran connecté **avant** de
+lancer Kivy. Il ne change la résolution **que si nécessaire** — évite le flash
+visible causé par un double changement de mode au démarrage.
 
-1. **Xorg config** (`/etc/X11/xorg.conf.d/99-adnrpi-hackpad.conf`) :
-   ```
-   Section "Monitor"
-       Identifier "HDMI-1"
-       Option "PreferredMode" "800x480"
-   EndSection
-   ```
+| Écran connecté | Mode préféré EDID | Comportement |
+|---|---|---|
+| 5 pouces 800×480 (pentest nomade) | `800x480+` | Force 800×480 si pas déjà actif → `HACKPAD_W=800 HACKPAD_H=480` |
+| Moniteur externe (bureau/dev) | autre (ex: `1920x1080+`) | Aucun xrandr — résolution native → `HACKPAD_W=W HACKPAD_H=H` |
 
-2. **`launch.sh`** — détecte le premier output connecté et force 800×480 via
-   `xrandr --output HDMI-1 --mode 800x480` avant de lancer Kivy.
-   Survit si l'Xorg config seule ne suffit pas (EDID inattendu).
+`main.py` lit `HACKPAD_W/H` via `os.environ` pour créer la fenêtre Kivy à la
+bonne taille dans les deux cas — borderless à (0,0), remplit l'écran.
 
-### Fenêtre Kivy fixe 800×480
+**Xorg config** (`/etc/X11/xorg.conf.d/99-adnrpi-hackpad.conf`) :
+force `PreferredMode 800x480` sur HDMI-1 pour que Xorg démarre directement à
+la bonne résolution (1er niveau de protection, avant même launch.sh).
 
-```python
-Config.set("graphics", "fullscreen", "0")
-Config.set("graphics", "borderless", "1")
-Config.set("graphics", "position",   "custom")
-Config.set("graphics", "left",       "0")
-Config.set("graphics", "top",        "0")
-```
-`fullscreen=auto` causait un resize 1 s après le démarrage (Kivy re-queryait
-la résolution de l'écran). `borderless=1` + taille fixe évite tout redimensionnement.
+**Pourquoi le flash se produit sans cette logique** : si `xrandr` est appelé
+inconditionnellement après que Xorg a déjà choisi 800x480, il force quand même
+un 2e changement de mode → flash visible inutile.
 
 ### Polices emoji
 

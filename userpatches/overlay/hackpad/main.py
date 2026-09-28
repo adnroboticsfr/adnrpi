@@ -13,9 +13,14 @@ if "DISPLAY" not in os.environ and "WAYLAND_DISPLAY" not in os.environ:
     os.environ.setdefault("SDL_VIDEODRIVER", "kmsdrm")
     os.environ.setdefault("KIVY_GL_BACKEND", "sdl2")
 
+# Taille de la fenêtre : définie par launch.sh selon l'écran détecté.
+# HACKPAD_W/H = 800/480 sur l'écran 5 pouces, résolution native sur moniteur externe.
+_W = os.environ.get("HACKPAD_W", "800")
+_H = os.environ.get("HACKPAD_H", "480")
+
 from kivy.config import Config
-Config.set("graphics", "width",      "800")
-Config.set("graphics", "height",     "480")
+Config.set("graphics", "width",      _W)
+Config.set("graphics", "height",     _H)
 Config.set("graphics", "fullscreen", "0")
 Config.set("graphics", "borderless", "1")
 Config.set("graphics", "position",   "custom")

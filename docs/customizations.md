@@ -4,7 +4,7 @@ This document lists every modification applied on top of the Armbian base image.
 When upgrading to a new Armbian version, go through each section and verify that
 the change is still needed, still compatible, and still applied correctly.
 
-**Last reviewed against:** Armbian main (26.11.x) — 2026-09-26
+**Last reviewed against:** Armbian main (26.11.x) — 2026-09-28
 
 ---
 
@@ -367,8 +367,9 @@ Change `ARMBIAN_BRANCH` in `configs/config-default.conf`. Test one config with
 
 ### Ce que ça fait
 Un OS de pentest complet avec une interface tactile Kivy sous **X11** (Xorg modesetting
-+ Lima DRI3). Démarre automatiquement au boot via autologin root → `.bash_profile` →
-`startx`. Depuis l'interface, l'utilisateur peut basculer en mode desktop (XFCE).
++ Lima DRI3). Démarre automatiquement au boot via `adnrpi-hackpad.service` (xinit).
+Depuis l'interface, l'utilisateur peut basculer en mode desktop (XFCE) avec
+`adnrpi-switch-mode desktop`.
 
 ### Découverte critique — SDL2 KMS non disponible sur Debian Bookworm
 
@@ -383,19 +384,20 @@ Un OS de pentest complet avec une interface tactile Kivy sous **X11** (Xorg mode
 
 ```text
 boot
- └─ systemd → adnrpi-hackpad.service (multi-user.target)
-     └─ xinit launch.sh -- :0 vt1 -nolisten tcp
-         └─ Xorg :0  (modesetting driver, Lima DRI3)
-             └─ launch.sh → xrandr force 800×480 → python3 main.py
-                 └─ HackPad Kivy (DISPLAY=:0, SDL2 X11 backend, borderless 800×480)
+ └─ systemd → adnrpi-firstboot.service (config hostname/wifi/password — 1re fois seulement)
+     └─ adnrpi-hackpad.service (After=adnrpi-firstboot.service)
+         └─ xinit launch.sh -- :0 vt1 -nolisten tcp
+             └─ Xorg :0  (modesetting driver, Lima DRI3)
+                 └─ launch.sh → xrandr force 800×480 si besoin → python3 main.py
+                     └─ HackPad Kivy (DISPLAY=:0, SDL2 X11 backend, borderless 800×480)
 ```
 
 Fichiers de démarrage :
 
 | Fichier | Rôle |
 |---------|------|
-| `/etc/systemd/system/adnrpi-hackpad.service` | Service systemd — `xinit launch.sh -- :0 vt1` |
-| `/opt/adnrpi-hackpad/launch.sh` | Force 800×480 via xrandr, lance python3 main.py |
+| `/etc/systemd/system/adnrpi-hackpad.service` | Service systemd — `xinit launch.sh -- :0 vt1`, `After=adnrpi-firstboot.service` |
+| `/opt/adnrpi-hackpad/launch.sh` | Détecte écran, force 800×480 si 5 pouces, lance python3 main.py |
 | `/etc/X11/xorg.conf.d/99-adnrpi-hackpad.conf` | Xorg config — force PreferredMode 800×480 sur HDMI-1 |
 
 ### Détection d'écran et résolution (launch.sh)
@@ -631,11 +633,11 @@ Les champs vides affichent le hint en gris (ex: `192.168.1.0/24`) pour guider l'
 
 - `strings /usr/lib/arm-linux-gnueabihf/libSDL2-2.0.so.0 | grep kmsdrm` → vide = normal, utiliser Xorg
 - `which Xorg && Xorg -version` — Xorg installé
-- `ls /root/.bash_profile /root/.xinitrc` — fichiers autostart présents
-- `systemctl is-enabled getty@tty1` + vérif override autologin
+- `systemctl is-enabled adnrpi-hackpad.service` → `enabled`
+- `systemctl status adnrpi-hackpad.service` → `active (running)` + PID xinit + PID python3
 - `which nmap arp-scan aircrack-ng hydra hashid gobuster` — outils pentest installés
 - `ls /usr/share/wordlists/rockyou.txt /usr/share/dirb/wordlists/common.txt` — wordlists présentes
-- Démarrage hardware : boot → écran HackPad en ≤ 30 s
+- Démarrage hardware : boot → premier démarrage firstboot → HackPad en ≤ 30 s après reboot
 
 ---
 
@@ -647,7 +649,7 @@ Les champs vides affichent le hint en gris (ex: `192.168.1.0/24`) pour guider l'
 - [ ] Check §10 — do the DRM sysfs paths still exist?
 - [ ] Check §11 — does the OPP overlay compile cleanly with the new kernel?
 - [ ] Check §13 — are ROS GPG keys still valid?
-- [ ] Check §15 — does Kivy install and start on KMS framebuffer? (bookworm-pentest build)
+- [ ] Check §15 — does Kivy install and start via xinit/Xorg? (bookworm-pentest build)
 - [ ] Check §15 — are all pentesting tools still in APT repos for the new base OS?
 - [ ] Re-enable jammy configs (§3) if the `no sunxi` BSP error is fixed upstream
 - [ ] Update **Last reviewed against** at the top of this file

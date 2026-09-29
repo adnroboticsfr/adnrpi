@@ -530,6 +530,8 @@ installHackPad() {
 
     # Global launcher
     ln -sf "${appdir}/adnrpi-switch-mode" /usr/local/bin/adnrpi-switch-mode
+    chmod +x "${appdir}/adnrpi-vnc"
+    ln -sf "${appdir}/adnrpi-vnc" /usr/local/bin/adnrpi-vnc
 
     # ── Service systemd — xinit :0 vt1 → Xorg → HackPad ─────────────────────────
     cp -v /tmp/overlay/adnrpi-hackpad.service /etc/systemd/system/

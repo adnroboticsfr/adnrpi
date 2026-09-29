@@ -1,0 +1,46 @@
+#!/bin/bash
+# Activer / désactiver / statut du serveur VNC HackPad
+# Usage:
+#   adnrpi-vnc enable [motdepasse]   — active VNC (avec ou sans mot de passe)
+#   adnrpi-vnc disable               — arrête et désactive VNC
+#   adnrpi-vnc status                — affiche l'état
+
+PASS_FILE="/etc/x11vnc.pass"
+SERVICE="adnrpi-vnc.service"
+
+case "${1:-}" in
+    enable)
+        if [[ -n "${2}" ]]; then
+            x11vnc -storepasswd "${2}" "${PASS_FILE}" 2>/dev/null
+            chmod 600 "${PASS_FILE}"
+            echo "VNC activé avec mot de passe."
+        else
+            rm -f "${PASS_FILE}"
+            echo "VNC activé sans mot de passe."
+        fi
+        systemctl enable "${SERVICE}"
+        systemctl restart "${SERVICE}"
+        echo "Adresse : $(hostname -I | awk '{print $1}'):5900"
+        ;;
+    disable)
+        systemctl stop    "${SERVICE}"
+        systemctl disable "${SERVICE}"
+        echo "VNC désactivé."
+        ;;
+    status)
+        state=$(systemctl is-active "${SERVICE}" 2>/dev/null)
+        enabled=$(systemctl is-enabled "${SERVICE}" 2>/dev/null)
+        echo "VNC service  : ${state} (${enabled})"
+        if [[ -f "${PASS_FILE}" ]]; then
+            echo "Mot de passe : oui"
+        else
+            echo "Mot de passe : non (accès libre)"
+        fi
+        if [[ "${state}" == "active" ]]; then
+            echo "Adresse      : $(hostname -I | awk '{print $1}'):5900"
+        fi
+        ;;
+    *)
+        echo "Usage: adnrpi-vnc [enable [password]|disable|status]"
+        ;;
+esac

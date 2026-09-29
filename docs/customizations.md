@@ -4,7 +4,7 @@ This document lists every modification applied on top of the Armbian base image.
 When upgrading to a new Armbian version, go through each section and verify that
 the change is still needed, still compatible, and still applied correctly.
 
-**Last reviewed against:** Armbian main (26.11.x) — 2026-09-28
+**Last reviewed against:** Armbian main (26.11.x) — 2026-09-29
 
 ---
 
@@ -359,10 +359,11 @@ Change `ARMBIAN_BRANCH` in `configs/config-default.conf`. Test one config with
 
 | Item | Valeur |
 |------|--------|
-| Files app | `userpatches/overlay/hackpad/` (main.py, screens/, tools/) |
-| Files système | `adnrpi-hackpad.service`, `adnrpi-hackpad.desktop`, `hackpad/adnrpi-switch-mode` |
+| Files app | `userpatches/overlay/hackpad/` (main.py, screens/, tools/, adnrpi-switch-mode, adnrpi-vnc) |
+| Files système | `adnrpi-hackpad.service`, `adnrpi-vnc.service`, `adnrpi-hackpad.desktop`, `20-adnrpi-pentest` |
 | Config build | `configs/adnrpi1-bookworm-pentest-server.conf` (`ADNRPI_PENTEST=yes`) |
 | Script install | `customize-image.sh → installPentestTools() + installHackPad()` |
+| Marqueur build | `action.yml` crée `overlay/.adnrpi-pentest` → détecté par `customize-image.sh` |
 | Risk on upgrade | **Medium** — dépend de la compatibilité Kivy + SDL2 + Xorg sur le nouvel OS |
 
 ### Ce que ça fait
@@ -385,20 +386,28 @@ Depuis l'interface, l'utilisateur peut basculer en mode desktop (XFCE) avec
 ```text
 boot
  └─ systemd → adnrpi-firstboot.service (config hostname/wifi/password — 1re fois seulement)
-     └─ adnrpi-hackpad.service (After=adnrpi-firstboot.service)
+     └─ adnrpi-hackpad.service
+         ConditionPathExists=/etc/adnrpi/setup.conf  ← GATE: ne démarre PAS tant que setup n'est pas confirmé
          └─ xinit launch.sh -- :0 vt1 -nolisten tcp
              └─ Xorg :0  (modesetting driver, Lima DRI3)
-                 └─ launch.sh → xrandr force 800×480 si besoin → python3 main.py
+                 └─ launch.sh → détecte écran → xrandr force 800×480 si 5 pouces → python3 main.py
                      └─ HackPad Kivy (DISPLAY=:0, SDL2 X11 backend, borderless 800×480)
+                         └─ adnrpi-vnc.service (si activé) : x11vnc partage :0 sur le port 5900
 ```
+
+Le fichier `/etc/adnrpi/setup.conf` est créé par :
+
+- `adnrpi-setup` (wizard interactif) au `do_apply()` — après validation, le wizard redémarre la machine
+- `adnrpi-firstboot.sh` — si un fichier `adnrpi-config.txt` est appliqué (firstboot non-interactif)
 
 Fichiers de démarrage :
 
 | Fichier | Rôle |
 |---------|------|
-| `/etc/systemd/system/adnrpi-hackpad.service` | Service systemd — `xinit launch.sh -- :0 vt1`, `After=adnrpi-firstboot.service` |
-| `/opt/adnrpi-hackpad/launch.sh` | Détecte écran, force 800×480 si 5 pouces, lance python3 main.py |
+| `/etc/systemd/system/adnrpi-hackpad.service` | Service systemd — `xinit launch.sh -- :0 vt1`, gate `ConditionPathExists=/etc/adnrpi/setup.conf` |
+| `/opt/adnrpi-hackpad/launch.sh` | Détecte écran, force 800×480 si 5 pouces (avec injection modeline), lance python3 main.py |
 | `/etc/X11/xorg.conf.d/99-adnrpi-hackpad.conf` | Xorg config — force PreferredMode 800×480 sur HDMI-1 |
+| `/etc/systemd/system/adnrpi-vnc.service` | VNC via x11vnc sur :0, `Requires=adnrpi-hackpad.service` |
 
 ### Détection d'écran et résolution (launch.sh)
 
@@ -406,21 +415,108 @@ Fichiers de démarrage :
 lancer Kivy. Il ne change la résolution **que si nécessaire** — évite le flash
 visible causé par un double changement de mode au démarrage.
 
-| Écran connecté | Mode préféré EDID | Comportement |
+| Écran connecté | Détection | Comportement |
 |---|---|---|
-| 5 pouces 800×480 (pentest nomade) | `800x480+` | Force 800×480 si pas déjà actif → `HACKPAD_W=800 HACKPAD_H=480` |
-| Moniteur externe (bureau/dev) | autre (ex: `1920x1080+`) | Aucun xrandr — résolution native → `HACKPAD_W=W HACKPAD_H=H` |
+| 5 pouces 800×480 ou 848×480 | `grep -E "^ +(848x480\|800x480)"` sur xrandr | Injecte modeline 800×480 si absent, force le mode → `HACKPAD_W=800 HACKPAD_H=480` |
+| Moniteur externe | aucune de ces résolutions disponibles | Utilise la résolution CURRENT active → `HACKPAD_W=W HACKPAD_H=H` |
+
+**Pourquoi 848×480 ?** L'écran 5 pouces retourne un EDID avec `848x480` comme résolution
+native (largeur physique réelle de l'écran, horloges TCON). `800x480` peut être absent de
+la liste xrandr. `launch.sh` détecte les deux variantes puis injecte une modeline
+`800x480` personnalisée si elle n'est pas déjà présente :
+
+```bash
+xrandr --newmode "800x480" 29.50 800 824 896 988 480 483 493 500 -hsync +vsync
+xrandr --addmode "$OUTPUT" "800x480"
+xrandr --output "$OUTPUT" --mode "800x480"
+```
+
+**Pourquoi CURRENT et non PREFERRED** : `PREFERRED` (marqueur `+` dans xrandr) est vide
+sur certains moniteurs sans EDID ou avec un EDID minimal. Utiliser CURRENT (résolution
+actuellement active, marquée `*`) est plus fiable — Xorg a déjà négocié la résolution.
 
 `main.py` lit `HACKPAD_W/H` via `os.environ` pour créer la fenêtre Kivy à la
 bonne taille dans les deux cas — borderless à (0,0), remplit l'écran.
 
-**Xorg config** (`/etc/X11/xorg.conf.d/99-adnrpi-hackpad.conf`) :
-force `PreferredMode 800x480` sur HDMI-1 pour que Xorg démarre directement à
-la bonne résolution (1er niveau de protection, avant même launch.sh).
+**Note mawk** : les expressions `\s` ne sont **pas** supportées par mawk (Debian default).
+Les patterns awk/grep dans `launch.sh` utilisent `^ +` au lieu de `^\s+`.
 
-**Pourquoi le flash se produit sans cette logique** : si `xrandr` est appelé
-inconditionnellement après que Xorg a déjà choisi 800x480, il force quand même
-un 2e changement de mode → flash visible inutile.
+### Marqueur de build — transmission de ADNRPI_PENTEST vers le chroot
+
+**Problème** : Armbian passe exactement 5 arguments fixes à `customize-image.sh`
+(`RELEASE LINUXFAMILY BOARD BUILD_DESKTOP BUILD_MINIMAL`). Les variables
+d'environnement supplémentaires comme `ADNRPI_PENTEST=yes` ne sont **pas** transmises
+dans le chroot — le block `if [[ "$ADNRPI_PENTEST" == "yes" ]]` ne s'exécutait jamais.
+
+**Solution** : fichier marqueur dans l'overlay.
+
+1. `actions/build-image/action.yml` lit `config-settings.conf` et crée
+   `userpatches/overlay/.adnrpi-pentest` si `ADNRPI_PENTEST=yes`.
+2. Armbian copie `overlay/` vers `/tmp/overlay/` dans le chroot.
+3. `customize-image.sh` vérifie :
+
+   ```bash
+   if [[ "${ADNRPI_PENTEST}" == "yes" ]] || [[ -f /tmp/overlay/.adnrpi-pentest ]]; then
+       installPentestTools
+       installHackPad
+   fi
+   ```
+
+Le fichier marqueur est ignoré par git (`.gitignore`), il n'existe que pendant le build.
+
+### Curseur souris
+
+La souris USB est utilisable dans HackPad. `main.py` active le curseur :
+
+```python
+Config.set("graphics", "show_cursor", "1")
+Config.set("input",    "mouse",      "mouse,disable_multitouch")
+```
+
+`disable_multitouch` supprime le point rouge qui apparaît au clic gauche en mode
+multitouch Kivy — comportement natif de clic simple préservé.
+
+Le config.ini pré-généré dans `customize-image.sh` contient aussi `show_cursor = 1`
+pour éviter tout conflit si Kivy lit son fichier de config avant `main.py`.
+
+### MOTD SSH — logo et statut
+
+À chaque connexion SSH, `/etc/update-motd.d/20-adnrpi-pentest` affiche :
+
+- Logo ADNRPi HackPad en art ASCII encadré
+- Toutes les adresses IP actives (eth0, wlan0, usb…)
+- Statut du service `adnrpi-hackpad` (actif / inactif / désactivé)
+- Si `/etc/adnrpi/setup.conf` est absent : message "configuration requise" +
+  instructions pour lancer `adnrpi-setup`
+
+Le script est installé par `installHackPad()` avec `chmod 755`.
+
+### VNC — accès distant
+
+HackPad peut être partagé via VNC (x11vnc) sur le port 5900. Le VNC partage
+l'affichage Xorg `:0` où HackPad s'exécute.
+
+**Activation depuis le wizard** : `adnrpi-setup` inclut un step VNC qui demande
+si le VNC doit être activé et un mot de passe optionnel.
+
+**Activation manuelle** via script :
+
+```bash
+adnrpi-vnc enable [motdepasse]   # active VNC, stocke le mot de passe dans /etc/x11vnc.pass
+adnrpi-vnc disable               # arrête et désactive le service
+adnrpi-vnc status                # état, présence mot de passe, adresse IP:port
+```
+
+**Service** (`adnrpi-vnc.service`) :
+
+- `After=adnrpi-hackpad.service` + `Requires=adnrpi-hackpad.service` — VNC démarre
+  uniquement si HackPad est actif
+- `ExecStartPre` attend que `DISPLAY=:0 xrandr` réponde (Xorg prêt)
+- Lance `x11vnc -display :0 -forever -shared -rfbport 5900` avec ou sans mot de passe
+  selon la présence de `/etc/x11vnc.pass`
+- `Restart=on-failure RestartSec=5`
+
+**Packages** : `x11vnc` installé par `installHackPad()`.
 
 ### Polices emoji
 
@@ -635,9 +731,13 @@ Les champs vides affichent le hint en gris (ex: `192.168.1.0/24`) pour guider l'
 - `which Xorg && Xorg -version` — Xorg installé
 - `systemctl is-enabled adnrpi-hackpad.service` → `enabled`
 - `systemctl status adnrpi-hackpad.service` → `active (running)` + PID xinit + PID python3
+- `ls /etc/adnrpi/setup.conf` — créé après `adnrpi-setup` ; absent = HackPad ne démarrera pas
 - `which nmap arp-scan aircrack-ng hydra hashid gobuster` — outils pentest installés
 - `ls /usr/share/wordlists/rockyou.txt /usr/share/dirb/wordlists/common.txt` — wordlists présentes
-- Démarrage hardware : boot → premier démarrage firstboot → HackPad en ≤ 30 s après reboot
+- `ls /etc/update-motd.d/20-adnrpi-pentest` — MOTD HackPad présent
+- `which x11vnc` — VNC disponible ; `adnrpi-vnc status` après activation
+- Démarrage hardware : boot → wizard `adnrpi-setup` → reboot → HackPad démarre → curseur souris visible
+- Test VNC : `adnrpi-vnc enable monpass` puis connexion depuis un VNC viewer sur `<IP>:5900`
 
 ---
 

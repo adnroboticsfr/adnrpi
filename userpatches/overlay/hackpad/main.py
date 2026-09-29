@@ -27,6 +27,7 @@ Config.set("graphics", "position",   "custom")
 Config.set("graphics", "left",       "0")
 Config.set("graphics", "top",        "0")
 Config.set("kivy",     "log_level",  "warning")
+Config.set("graphics", "show_cursor", "1")
 Config.set("input",    "mouse",      "mouse,disable_multitouch")
 Config.set("kivy",     "keyboard_mode", "")
 

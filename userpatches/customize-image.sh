@@ -570,7 +570,7 @@ left = 0
 top = 0
 minimum_width = 0
 minimum_height = 0
-show_cursor = 0
+show_cursor = 1
 
 [input]
 mouse = mouse,disable_multitouch

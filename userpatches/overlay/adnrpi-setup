@@ -94,6 +94,8 @@ load_current() {
     CUR_WIFI_SSID=""
     CUR_WIFI_PASSWORD=""
     CUR_WIFI_COUNTRY="FR"
+    CUR_VNC_ENABLED="no"
+    CUR_VNC_PASSWORD=""
 
     # Boot config: initial defaults the user may have pre-filled (medium priority)
     # Only used when setup.conf does not yet exist (first run).
@@ -126,6 +128,8 @@ load_current() {
         CUR_USER_PASSWORD="${SAVED_USER_PASSWORD:-$CUR_USER_PASSWORD}"
         CUR_WIFI_SSID="${SAVED_WIFI_SSID:-$CUR_WIFI_SSID}"
         CUR_WIFI_COUNTRY="${SAVED_WIFI_COUNTRY:-$CUR_WIFI_COUNTRY}"
+        CUR_VNC_ENABLED="${SAVED_VNC_ENABLED:-$CUR_VNC_ENABLED}"
+        CUR_VNC_PASSWORD="${SAVED_VNC_PASSWORD:-$CUR_VNC_PASSWORD}"
     fi
 }
 
@@ -181,6 +185,21 @@ step_wifi() {
     echo ""
 }
 
+step_vnc() {
+    section "VNC (accès distant)"
+    echo -e "    ${DIM}VNC permet de voir et contrôler HackPad depuis un PC (port 5900).${NC}"
+    echo ""
+    yesno NEW_VNC_ENABLED "Activer VNC" "$( [[ "$CUR_VNC_ENABLED" == "yes" ]] && echo y || echo n )"
+    if [[ "$NEW_VNC_ENABLED" == "yes" ]]; then
+        echo -e "    ${DIM}Mot de passe VNC (8 caractères max, laisser vide = sans mot de passe).${NC}"
+        ask_password NEW_VNC_PASSWORD "Mot de passe VNC" "${CUR_VNC_PASSWORD}"
+        [[ -z "$NEW_VNC_PASSWORD" ]] && NEW_VNC_PASSWORD="${CUR_VNC_PASSWORD}"
+    else
+        NEW_VNC_PASSWORD="${CUR_VNC_PASSWORD}"
+    fi
+    echo ""
+}
+
 step_summary() {
     section "Summary"
     echo -e "    Hostname     : ${BOLD}${NEW_HOSTNAME}${NC}"
@@ -199,6 +218,12 @@ step_summary() {
         echo -e "    WiFi         : ${BOLD}${NEW_WIFI_SSID}${NC} (${NEW_WIFI_COUNTRY})"
     else
         echo -e "    WiFi         : ${DIM}skipped${NC}"
+    fi
+    if [[ "$NEW_VNC_ENABLED" == "yes" ]]; then
+        local vnc_sec="$( [[ -n "$NEW_VNC_PASSWORD" ]] && echo "avec mot de passe" || echo "sans mot de passe" )"
+        echo -e "    VNC          : ${BOLD}activé${NC} — port 5900 (${vnc_sec})"
+    else
+        echo -e "    VNC          : ${DIM}désactivé${NC}"
     fi
     echo ""
 }
@@ -269,6 +294,27 @@ EOF
     fi
 }
 
+apply_vnc() {
+    if [[ "$NEW_VNC_ENABLED" == "yes" ]]; then
+        # Installe x11vnc si absent
+        if ! command -v x11vnc &>/dev/null; then
+            apt-get install -y --no-install-recommends x11vnc 2>/dev/null || true
+        fi
+        # Mot de passe VNC
+        if [[ -n "$NEW_VNC_PASSWORD" ]]; then
+            x11vnc -storepasswd "${NEW_VNC_PASSWORD}" /etc/x11vnc.pass 2>/dev/null
+            chmod 600 /etc/x11vnc.pass
+        else
+            rm -f /etc/x11vnc.pass
+        fi
+        systemctl enable adnrpi-vnc.service 2>/dev/null || true
+        systemctl start  adnrpi-vnc.service 2>/dev/null || true
+    else
+        systemctl disable adnrpi-vnc.service 2>/dev/null || true
+        systemctl stop    adnrpi-vnc.service 2>/dev/null || true
+    fi
+}
+
 save_state() {
     mkdir -p "${SETUP_DIR}"
     cat > "${SETUP_CONF}" << EOF
@@ -285,6 +331,8 @@ SAVED_USERNAME=${NEW_USERNAME}
 SAVED_USER_PASSWORD=${NEW_USER_PASSWORD}
 SAVED_WIFI_SSID=${NEW_WIFI_SSID}
 SAVED_WIFI_COUNTRY=${NEW_WIFI_COUNTRY}
+SAVED_VNC_ENABLED=${NEW_VNC_ENABLED}
+SAVED_VNC_PASSWORD=${NEW_VNC_PASSWORD}
 EOF
     chmod 600 "${SETUP_CONF}"
 
@@ -310,6 +358,7 @@ do_apply() {
     apply_passwords  && echo -e "    ${GREEN}✓${NC} Root password"
     apply_user       && [[ "$CREATE_PI" == "yes" ]] && echo -e "    ${GREEN}✓${NC} User '${NEW_USERNAME}'"
     apply_wifi       && [[ -n "${NEW_WIFI_SSID}" ]] && echo -e "    ${GREEN}✓${NC} WiFi"
+    apply_vnc        && [[ "$NEW_VNC_ENABLED" == "yes" ]] && echo -e "    ${GREEN}✓${NC} VNC (port 5900)"
     save_state
     echo ""
     echo -e "  ${BOLD}${GREEN}Configuration applied!${NC}"
@@ -372,6 +421,7 @@ main() {
     step_keyboard
     step_security
     step_wifi
+    step_vnc
     step_summary
 
     yesno CONFIRM "Apply this configuration" "y"

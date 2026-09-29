@@ -591,6 +591,13 @@ KIVYCONF
     cp -v /tmp/overlay/20-adnrpi-pentest /etc/update-motd.d/
     chmod 755 /etc/update-motd.d/20-adnrpi-pentest
 
+    # ── VNC (x11vnc) — activé/configuré depuis adnrpi-setup ──────────────────────
+    apt-get install -y --no-install-recommends x11vnc
+    cp -v /tmp/overlay/adnrpi-vnc.service /etc/systemd/system/
+    chmod 644 /etc/systemd/system/adnrpi-vnc.service
+    # Le service est installé mais pas activé — adnrpi-setup l'active si VNC voulu
+    systemctl daemon-reload
+
     echo "Installing HackPad ... [DONE]"
 }
 

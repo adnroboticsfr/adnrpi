@@ -1,0 +1,27 @@
+[Unit]
+Description=ADNRPi VNC Server — partage écran HackPad (x11vnc :0)
+After=adnrpi-hackpad.service
+Requires=adnrpi-hackpad.service
+
+[Service]
+Type=simple
+User=root
+Environment=HOME=/root DISPLAY=:0
+# Attendre que Xorg soit prêt
+ExecStartPre=/bin/sh -c 'until DISPLAY=:0 xrandr &>/dev/null; do sleep 1; done'
+# Lancer x11vnc avec mot de passe si /etc/x11vnc.pass existe, sinon sans auth
+ExecStart=/bin/sh -c '\
+    if [ -f /etc/x11vnc.pass ]; then \
+        exec x11vnc -display :0 -forever -shared -rfbport 5900 \
+             -xkb -noxrecord -noxfixes -noxdamage \
+             -rfbauth /etc/x11vnc.pass -auth /root/.Xauthority; \
+    else \
+        exec x11vnc -display :0 -forever -shared -rfbport 5900 \
+             -xkb -noxrecord -noxfixes -noxdamage \
+             -nopw -auth /root/.Xauthority; \
+    fi'
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

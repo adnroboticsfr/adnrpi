@@ -587,6 +587,10 @@ KIVYCONF
     cp -v /tmp/overlay/adnrpi-hackpad.desktop /usr/share/applications/
     chmod 644 /usr/share/applications/adnrpi-hackpad.desktop
 
+    # ── MOTD SSH — logo + IP + statut HackPad ────────────────────────────────────
+    cp -v /tmp/overlay/20-adnrpi-pentest /etc/update-motd.d/
+    chmod 755 /etc/update-motd.d/20-adnrpi-pentest
+
     echo "Installing HackPad ... [DONE]"
 }
 

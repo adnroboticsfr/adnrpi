@@ -586,6 +586,17 @@ main() {
 
     if [[ "$config_applied" == "true" ]]; then
         log "First boot configuration completed successfully!"
+        # Créer le marqueur setup.conf pour débloquer adnrpi-hackpad.service
+        # (même marqueur qu'adnrpi-setup, pour les deux méthodes de config)
+        if [[ ! -f "/etc/adnrpi/setup.conf" ]]; then
+            mkdir -p /etc/adnrpi
+            cat > /etc/adnrpi/setup.conf <<'SETUPEOF'
+# ADNRPi Setup — applied via firstboot (adnrpi-config.txt or RPi Imager)
+SETUP_VERSION=1
+SETUPEOF
+            chmod 600 /etc/adnrpi/setup.conf
+            log "Marqueur setup.conf créé — HackPad actif au prochain boot"
+        fi
     else
         log "No configuration applied (no valid config files found)"
     fi

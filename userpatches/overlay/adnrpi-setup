@@ -312,9 +312,19 @@ do_apply() {
     apply_wifi       && [[ -n "${NEW_WIFI_SSID}" ]] && echo -e "    ${GREEN}✓${NC} WiFi"
     save_state
     echo ""
-    echo -e "  ${BOLD}${GREEN}Setup complete!${NC}"
-    echo -e "  ${DIM}Run 'adnrpi-setup' at any time to reconfigure.${NC}"
+    echo -e "  ${BOLD}${GREEN}Configuration applied!${NC}"
     echo ""
+    # HackPad démarre automatiquement après reboot (ConditionPathExists=setup.conf)
+    if systemctl is-enabled adnrpi-hackpad.service &>/dev/null; then
+        echo -e "  ${BOLD}HackPad démarrera automatiquement après le reboot.${NC}"
+        echo ""
+        echo -e "  Reboot dans 5 secondes… (Ctrl+C pour annuler)"
+        sleep 5
+        systemctl reboot
+    else
+        echo -e "  ${DIM}Run 'adnrpi-setup' at any time to reconfigure.${NC}"
+        echo ""
+    fi
 }
 
 # ── Update check ──────────────────────────────────────────────────────────────

@@ -12,6 +12,8 @@ from kivy.graphics import Color, Rectangle
 
 from screens.keyboard import make_field_button
 
+_MAX_OUTPUT_LINES = 300
+
 # Clés de settings → clé de param qui se pré-remplit automatiquement
 _SETTINGS_MAP = {
     "target":     "target_ip",
@@ -95,13 +97,11 @@ class ToolScreen(Screen):
             pwd = param.get("password", False)
             hint = param.get("hint", "")
 
-            # Valeur par défaut + pré-remplissage depuis settings
             default = param.get("default", "")
             if not default:
                 skey = _SETTINGS_MAP.get(key)
                 if skey and saved.get(skey):
                     val = saved[skey]
-                    # Pour output_dir, ajouter un nom de fichier
                     if key in ("output", "output_dir"):
                         val = val.rstrip("/") + "/" + tool["name"].lower().replace(" ", "_")
                     default = val
@@ -130,7 +130,7 @@ class ToolScreen(Screen):
         params_scroll = ScrollView(size_hint_y=None, height=min(n_params * 48 + 6, 180))
         params_scroll.add_widget(params_layout)
 
-        # ── Boutons RUN / STOP / CLR ──────────────────────────────────────────
+        # ── Boutons RUN / STOP / CLR / RAPPORT ───────────────────────────────
         btn_row = BoxLayout(size_hint_y=None, height=48, spacing=5, padding=(6, 3))
 
         self._btn_run = Button(
@@ -153,11 +153,20 @@ class ToolScreen(Screen):
         )
         self._btn_clear.bind(on_press=lambda *a: setattr(self._output, "text", ""))
 
+        self._btn_report = Button(
+            text="RAPPORT", font_size="13sp",
+            size_hint_x=None, width=88,
+            background_color=(0.15, 0.35, 0.65, 1), background_normal="",
+            disabled=True
+        )
+        self._btn_report.bind(on_press=self._show_report)
+
         btn_row.add_widget(self._btn_run)
         btn_row.add_widget(self._btn_stop)
         btn_row.add_widget(self._btn_clear)
+        btn_row.add_widget(self._btn_report)
 
-        # ── Console ───────────────────────────────────────────────────────────
+        # ── Console de sortie ────────────────────────────────────────────────
         self._output = TextInput(
             text="", readonly=True, multiline=True,
             font_name="RobotoMono-Regular", font_size="12sp",
@@ -186,6 +195,7 @@ class ToolScreen(Screen):
         self._output.text = f"$ {' '.join(str(x) for x in cmd)}\n"
         self._btn_run.disabled = True
         self._btn_stop.disabled = False
+        self._btn_report.disabled = True
 
         def run():
             try:
@@ -207,15 +217,38 @@ class ToolScreen(Screen):
     def _stop_tool(self, *args):
         if self._proc and self._proc.poll() is None:
             self._proc.terminate()
+            # SIGKILL si l'outil ne répond pas sous 3 secondes
+            Clock.schedule_once(self._force_kill, 3)
+
+    def _force_kill(self, dt):
+        if self._proc and self._proc.poll() is None:
+            self._proc.kill()
 
     def _on_done(self, *args):
         self._btn_run.disabled = False
         self._btn_stop.disabled = True
         self._append("\n--- done ---\n")
+        # Activer RAPPORT si un analyseur existe pour cet outil
+        from screens.report import ANALYZERS
+        if self._tool.get("name", "").lower() in ANALYZERS:
+            self._btn_report.disabled = False
 
     def _append(self, text):
         self._output.text += text
-        self._output.cursor = (0, len(self._output._lines) - 1)
+        # Limiter le buffer à _MAX_OUTPUT_LINES lignes
+        lines = self._output.text.splitlines(True)
+        if len(lines) > _MAX_OUTPUT_LINES:
+            self._output.text = "".join(lines[-_MAX_OUTPUT_LINES:])
+        # Scroll vers le bas
+        self._output.cursor = (len(self._output.text), 0)
+
+    def _show_report(self, *args):
+        from screens.report import ReportPopup
+        popup = ReportPopup(
+            tool_name=self._tool.get("name", ""),
+            output_text=self._output.text
+        )
+        popup.open()
 
     def _go_back(self, *args):
         if self._proc and self._proc.poll() is None:

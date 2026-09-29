@@ -593,11 +593,46 @@ KIVYCONF
     cp -v /tmp/overlay/20-adnrpi-pentest /etc/update-motd.d/
     chmod 755 /etc/update-motd.d/20-adnrpi-pentest
 
-    # ── VNC (x11vnc) — activé/configuré depuis adnrpi-setup ──────────────────────
-    apt-get install -y --no-install-recommends x11vnc
+    # ── VNC (x11vnc) — activé/configuré depuis adnrpi-setup ou settings HackPad ──
+    apt-get install -y --no-install-recommends x11vnc xinput
     cp -v /tmp/overlay/adnrpi-vnc.service /etc/systemd/system/
     chmod 644 /etc/systemd/system/adnrpi-vnc.service
-    # Le service est installé mais pas activé — adnrpi-setup l'active si VNC voulu
+    # Le service est installé mais pas activé — activé via adnrpi-setup ou Settings HackPad
+    systemctl daemon-reload
+
+    # ── Xorg InputClass libinput — tactile USB hotplug automatique ───────────────
+    # libinput gère le hotplug des écrans tactiles USB sans redémarrer Xorg
+    cat > /etc/X11/xorg.conf.d/99-adnrpi-touch.conf <<'TOUCHEOF'
+Section "InputClass"
+    Identifier "touchscreen"
+    MatchIsTouchscreen "on"
+    Driver "libinput"
+    Option "Tapping" "on"
+    Option "CalibrationMatrix" "1 0 0 0 1 0 0 0 1"
+EndSection
+TOUCHEOF
+    chmod 644 /etc/X11/xorg.conf.d/99-adnrpi-touch.conf
+
+    # ── Boot silencieux — pas de messages kernel pendant HackPad ─────────────────
+    # Ajoute quiet loglevel=1 à extraargs dans armbianEnv.txt (si pas déjà présent)
+    if [ -f /boot/armbianEnv.txt ]; then
+        if grep -q "^extraargs=" /boot/armbianEnv.txt; then
+            if ! grep -q "quiet" /boot/armbianEnv.txt; then
+                sed -i 's/^extraargs=\(.*\)/extraargs=\1 quiet loglevel=1 vt.global_cursor_default=0/' \
+                    /boot/armbianEnv.txt
+            fi
+        else
+            echo "extraargs=quiet loglevel=1 vt.global_cursor_default=0" >> /boot/armbianEnv.txt
+        fi
+    fi
+
+    # ── getty@tty1 override — console seulement avant setup, HackPad après ────────
+    # Avant setup.conf : getty@tty1 tourne (l'utilisateur peut se connecter et lancer adnrpi-setup)
+    # Après setup.conf : hackpad.service prend vt1, getty@tty1 s'arrête (Conflicts=)
+    mkdir -p /etc/systemd/system/getty@tty1.service.d
+    cp -v /tmp/overlay/getty@tty1.service.d/hackpad.conf \
+          /etc/systemd/system/getty@tty1.service.d/hackpad.conf
+    chmod 644 /etc/systemd/system/getty@tty1.service.d/hackpad.conf
     systemctl daemon-reload
 
     echo "Installing HackPad ... [DONE]"

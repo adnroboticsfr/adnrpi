@@ -7,9 +7,18 @@
 #
 # Détection basée sur les modes EDID disponibles, pas sur le marqueur '+' qui
 # est absent de certains écrans bon marché (ex: 848x480 présent mais pas 800x480).
+# Note mawk : \s non supporté — utilisation de grep -E avec espaces littéraux.
 
 SMALL_W=800
 SMALL_H=480
+
+# Attendre que les périphériques d'entrée USB soient prêts (jusqu'à 10 s)
+# Le tactile USB peut prendre 3-5 s après Xorg au boot
+for i in $(seq 1 10); do
+    _cnt=$(ls /dev/input/event* 2>/dev/null | wc -l)
+    [ "${_cnt}" -gt 0 ] && break
+    sleep 1
+done
 
 # Premier output connecté
 OUTPUT=$(xrandr 2>/dev/null | awk '/ connected/{print $1; exit}')
@@ -28,7 +37,6 @@ CURRENT=$(xrandr 2>/dev/null | awk "
 ")
 
 # Détection mini écran : 848x480 OU 800x480 dans les modes EDID disponibles
-# (mawk Debian ne supporte pas \s — utilisation de grep)
 IS_SMALL=$(xrandr 2>/dev/null | grep -E "^ +(848x480|800x480)" | head -1)
 
 echo "[launch] output=${OUTPUT}  current=${CURRENT}  small=${IS_SMALL:-no}"
@@ -36,7 +44,7 @@ echo "[launch] output=${OUTPUT}  current=${CURRENT}  small=${IS_SMALL:-no}"
 if [ -n "${IS_SMALL}" ]; then
     # ── Écran 5 pouces 800x480 ──────────────────────────────────────────────
     # Injecte un modeline 800x480 si absent, puis force la résolution
-    if ! xrandr 2>/dev/null | grep -q "^\s*800x480"; then
+    if ! xrandr 2>/dev/null | grep -qE "^ +800x480"; then
         echo "[launch] ajout modeline 800x480"
         xrandr --newmode "800x480" 29.50 800 824 896 988 480 483 493 500 -hsync +vsync 2>/dev/null || true
         xrandr --addmode "$OUTPUT" "800x480" 2>/dev/null || true

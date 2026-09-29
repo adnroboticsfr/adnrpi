@@ -1,6 +1,8 @@
 [Unit]
 Description=ADNRPi HackPad — interface Kivy sous Xorg (tty1)
 After=systemd-udevd.service local-fs.target adnrpi-firstboot.service
+# HackPad prend vt1 — empêche getty@tty1 de tourner en même temps
+Conflicts=getty@tty1.service
 ConditionPathExists=/opt/adnrpi-hackpad/main.py
 ConditionPathExists=/etc/adnrpi/setup.conf
 

@@ -95,13 +95,27 @@ runs:
     - name: Create build variant markers
       shell: bash
       run: |
-        # ADNRPI_PENTEST n'est pas transmis au chroot customize-image.sh par Armbian
-        # (seuls RELEASE/LINUXFAMILY/BOARD/BUILD_DESKTOP/BUILD_MINIMAL sont passés).
-        # On crée un fichier marqueur dans l'overlay que customize-image.sh peut lire.
+        # Les variables custom (ADNRPI_*) ne sont pas transmises au chroot
+        # customize-image.sh par Armbian (seuls RELEASE/LINUXFAMILY/BOARD/
+        # BUILD_DESKTOP/BUILD_MINIMAL sont passés en args).
+        # Solution : créer des fichiers marqueurs dans l'overlay, copiés
+        # automatiquement par Armbian dans /tmp/overlay à l'intérieur du chroot.
         source ./build/userpatches/config-settings.conf 2>/dev/null || true
         if [[ "${ADNRPI_PENTEST}" == "yes" ]]; then
-          echo "[marker] ADNRPI_PENTEST=yes → création overlay/.adnrpi-pentest"
+          echo "[marker] ADNRPI_PENTEST=yes → .adnrpi-pentest"
           touch ./build/userpatches/overlay/.adnrpi-pentest
+        fi
+        if [[ "${ADNRPI_ROS}" == "ros2" ]]; then
+          echo "[marker] ADNRPI_ROS=ros2 → .adnrpi-ros2"
+          touch ./build/userpatches/overlay/.adnrpi-ros2
+        fi
+        if [[ "${ADNRPI_ROS}" == "ros1" ]]; then
+          echo "[marker] ADNRPI_ROS=ros1 → .adnrpi-ros1"
+          touch ./build/userpatches/overlay/.adnrpi-ros1
+        fi
+        if [[ "${ADNRPI_ROS_DESKTOP}" == "yes" ]]; then
+          echo "[marker] ADNRPI_ROS_DESKTOP=yes → .adnrpi-ros-desktop"
+          touch ./build/userpatches/overlay/.adnrpi-ros-desktop
         fi
 
     - name: sed VERSION

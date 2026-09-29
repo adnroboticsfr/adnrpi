@@ -47,15 +47,15 @@ Main() {
                     trixie|forky|sid) installChromiumFlags ;;
                 esac
             fi
-            case "${ADNRPI_ROS}" in
-                ros2)
-                    case "${RELEASE}" in
-                        noble) installROS2Jazzy ;;
-                        *)     installROS2Humble ;;
-                    esac
-                    ;;
-                ros1) installROS1Noetic ;;
-            esac
+            # ADNRPI_ROS n'est pas transmis au chroot — détection via marqueur
+            if [[ "${ADNRPI_ROS}" == "ros2" ]] || [[ -f /tmp/overlay/.adnrpi-ros2 ]]; then
+                case "${RELEASE}" in
+                    noble) installROS2Jazzy ;;
+                    *)     installROS2Humble ;;
+                esac
+            elif [[ "${ADNRPI_ROS}" == "ros1" ]] || [[ -f /tmp/overlay/.adnrpi-ros1 ]]; then
+                installROS1Noetic
+            fi
             # ADNRPI_PENTEST n'est pas transmis au chroot par Armbian (seuls
             # RELEASE/LINUXFAMILY/BOARD/BUILD_DESKTOP sont passés en args).
             # action.yml crée /tmp/overlay/.adnrpi-pentest avant le build.
@@ -271,6 +271,7 @@ http://packages.ros.org/ros2/ubuntu ${release} main" \
 
     apt-get update
 
+    # ── Packages de base (server + desktop) ──────────────────────────────────
     apt-get install -y \
         "ros-${distro}-ros-base" \
         python3-colcon-common-extensions \
@@ -297,6 +298,33 @@ http://packages.ros.org/ros2/ubuntu ${release} main" \
         "ros-${distro}-joint-state-publisher" \
         "ros-${distro}-xacro" || true
 
+    # ── Packages desktop — outils de visualisation et navigation ─────────────
+    # Activés si ADNRPI_ROS_DESKTOP=yes dans le conf (marqueur .adnrpi-ros-desktop)
+    if [[ "${ADNRPI_ROS_DESKTOP}" == "yes" ]] || [[ -f /tmp/overlay/.adnrpi-ros-desktop ]]; then
+        echo "Installing ROS2 desktop tools ..."
+        apt-get install -y \
+            "ros-${distro}-rqt" \
+            "ros-${distro}-rqt-graph" \
+            "ros-${distro}-rqt-topic" \
+            "ros-${distro}-rqt-action" \
+            "ros-${distro}-rqt-service-caller" \
+            "ros-${distro}-rqt-param" \
+            "ros-${distro}-rqt-console" \
+            "ros-${distro}-rqt-plot" \
+            "ros-${distro}-rviz2" \
+            "ros-${distro}-nav2-bringup" \
+            "ros-${distro}-nav2-map-server" \
+            "ros-${distro}-nav2-lifecycle-manager" \
+            "ros-${distro}-nav2-controller" \
+            "ros-${distro}-nav2-planner" \
+            "ros-${distro}-slam-toolbox" \
+            "ros-${distro}-cartographer-ros" \
+            "ros-${distro}-laser-geometry" \
+            "ros-${distro}-pcl-ros" \
+            "ros-${distro}-moveit-ros-planning-interface" || true
+        echo "Installing ROS2 desktop tools ... [DONE]"
+    fi
+
     rosdep init || true
     rosdep update || true
 
@@ -304,7 +332,16 @@ http://packages.ros.org/ros2/ubuntu ${release} main" \
     chmod 755 /usr/local/bin/adnrpi-ros-config
     mkdir -p /etc/ros
 
+    # Source ROS2 automatiquement pour tous les utilisateurs
     echo "source /opt/ros/${distro}/setup.bash" >> /etc/skel/.bashrc
+    # Aussi pour root (déjà connecté en chroot)
+    grep -q "source /opt/ros/${distro}/setup.bash" /root/.bashrc || \
+        echo "source /opt/ros/${distro}/setup.bash" >> /root/.bashrc
+
+    # Vérification rapide de l'installation
+    echo "--- ROS2 install check ---"
+    /opt/ros/${distro}/bin/ros2 --version 2>/dev/null || echo "[WARN] ros2 binary not found in /opt/ros/${distro}/bin"
+    echo "--------------------------"
 
     echo "Installing ROS2 ${distro^} ... [DONE]"
 }

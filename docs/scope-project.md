@@ -184,6 +184,8 @@ avec les 5 destinations. L'écran courant est grisé/désactivé dans le menu.
 | Gestes tactile (T/div, trigger, V-offset) | ✓ **Validé** — direction-lock single-touch |
 | Buffer STOP + navigation | ✓ **Validé** — glisser H en mode STOP |
 | FFT/Spectre (M1) | ✓ **Codé** — dB scale, barres colorées, fond bleu, marqueur pic |
+| FFT fenêtre Hann | ✓ **Codé** — réduit fuite spectrale, pics nets |
+| FFT axe fréquence | ✓ **Codé** — 6 labels 0Hz→Nyquist en bas de zone FFT |
 | Persistance waveform (M2) | ✓ **Codé** — 8 sweeps fondu alpha, fond violet |
 | Bouton Vue cycle (NORM/FFT/PST) | ✓ **Codé** — 1 bouton, 3 modes, couleurs distinctes |
 | Écran Settings | ✓ **Validé** — source, shunt, offset, thème, langue |

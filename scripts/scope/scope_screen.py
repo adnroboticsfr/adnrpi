@@ -517,56 +517,80 @@ class WaveformWidget(Widget):
         n = len(win)
         if n < 8: return
 
-        arr      = np.array(win, dtype=np.float32)
+        # Fenêtre Hann — réduit la fuite spectrale (harmoniques parasites)
+        window   = np.hanning(n)
+        arr      = np.array(win, dtype=np.float32) * window
         fft_vals = np.abs(np.fft.rfft(arr))
         fft_n    = len(fft_vals)
-        # Echelle dB normalisée : plancher à -60 dB
-        fft_db   = 20 * np.log10(fft_vals / max(float(fft_vals.max()), 1e-9) + 1e-9)
-        fft_db   = np.clip(fft_db, -60, 0)
-        norm     = (fft_db + 60) / 60.0   # 0..1
+
+        # Echelle dB normalisée, plancher -60 dB
+        fft_db = 20 * np.log10(fft_vals / max(float(fft_vals.max()), 1e-9) + 1e-9)
+        fft_db = np.clip(fft_db, -60, 0)
+        norm   = (fft_db + 60) / 60.0   # 0..1
 
         peak_idx  = int(np.argmax(fft_vals[1:])) + 1
         peak_freq = peak_idx * (self._sr / 2.0) / max(fft_n - 1, 1)
 
-        C_FFT_BG = (0.0, 0.04, 0.10, 1)   # fond bleu foncé — distinct du fond normal
+        C_FFT_BG  = (0.0, 0.04, 0.10, 1)
+        AX_H      = 16   # hauteur réservée en bas pour l'axe de fréquence
+        plot_y    = self.y + AX_H
+        plot_h    = h - AX_H
+
+        from kivy.core.text import Label as CoreLabel
 
         with self.canvas:
             Color(*C_FFT_BG)
             Rectangle(pos=self.pos, size=self.size)
 
+            # Grille (dans la zone plot uniquement)
             Color(*C_GRID)
-            for c in range(GRID_X+1):
-                xg = self.x+c*w/GRID_X
-                Line(points=[xg, self.y, xg, self.y+h], width=1)
-            for r in range(GRID_Y+1):
-                yg = self.y+r*h/GRID_Y
-                Line(points=[self.x, yg, self.x+w, yg], width=1)
+            for c in range(GRID_X + 1):
+                xg = self.x + c * w / GRID_X
+                Line(points=[xg, plot_y, xg, plot_y + plot_h], width=1)
+            for r in range(GRID_Y + 1):
+                yg = plot_y + r * plot_h / GRID_Y
+                Line(points=[self.x, yg, self.x + w, yg], width=1)
 
-            # Barres spectrales (remplies jusqu'en bas)
+            # Barres spectrales
             bar_w = max(1.0, w / max(fft_n, 1))
             for i in range(fft_n):
                 v = float(norm[i])
                 if v < 0.01: continue
-                px  = self.x + i * w / max(fft_n - 1, 1)
-                bar_h = v * h * 0.95
+                px    = self.x + i * w / max(fft_n - 1, 1)
+                bar_h = v * plot_h * 0.95
                 Color(0.1 + 0.6*v, 0.6 + 0.4*v, 0.2, 0.9)
-                Rectangle(pos=(px, self.y), size=(max(bar_w - 1, 1), bar_h))
+                Rectangle(pos=(px, plot_y), size=(max(bar_w - 1, 1), bar_h))
 
             # Marqueur pic
             peak_px = self.x + peak_idx * w / max(fft_n - 1, 1)
             Color(*C_TRIG)
-            Line(points=[peak_px, self.y, peak_px, self.y+h], width=1.5)
+            Line(points=[peak_px, plot_y, peak_px, plot_y + plot_h], width=1.5)
 
-            # Label fréquence pic en haut à gauche
+            # Label pic — haut gauche
             Color(1.0, 0.85, 0.0, 1)
-            freq_str = _fmt_freq(peak_freq)
-            from kivy.core.text import Label as CoreLabel
-            cl = CoreLabel(text=f"Pic: {freq_str}", font_size=13)
+            cl = CoreLabel(text=f"Pic: {_fmt_freq(peak_freq)}", font_size=13)
             cl.refresh()
             if cl.texture:
                 Rectangle(texture=cl.texture,
-                          pos=(self.x + 6, self.y + h - cl.texture.height - 4),
+                          pos=(self.x + 6, plot_y + plot_h - cl.texture.height - 4),
                           size=cl.texture.size)
+
+            # Axe de fréquence : labels START / intermédiaires / STOP
+            nyq = self._sr / 2.0
+            n_lbl = 5   # 0, 1/5, 2/5, 3/5, 4/5, 5/5 = 6 points
+            Color(0.45, 0.45, 0.55, 1)
+            for i in range(n_lbl + 1):
+                freq = i * nyq / n_lbl
+                lx   = self.x + i * w / n_lbl
+                lbl  = CoreLabel(text=_fmt_freq(freq), font_size=10)
+                lbl.refresh()
+                if lbl.texture:
+                    tx = max(self.x,
+                             min(self.x + w - lbl.texture.width,
+                                 lx - lbl.texture.width / 2))
+                    Rectangle(texture=lbl.texture,
+                              pos=(tx, self.y + 2),
+                              size=lbl.texture.size)
 
 
 # ── Helpers panneau droit ─────────────────────────────────────────────────────

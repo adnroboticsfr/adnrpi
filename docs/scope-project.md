@@ -4,7 +4,8 @@ Outil de mesure tactile pour SmartPi One (Allwinner H3, 1GB RAM, Armbian Bookwor
 Écran 5 pouces 800×480, interface Kivy, même socle que HackPad.
 
 **Démarré :** 2026-09-29  
-**État :** test UI en cours (DummyCapture)
+**Dernière mise à jour :** 2026-09-30  
+**État :** Fonctionnel — oscilloscope, multimètre, I2C, UART, navigation multi-écrans
 
 ---
 
@@ -17,7 +18,7 @@ Outil de mesure tactile pour SmartPi One (Allwinner H3, 1GB RAM, Armbian Bookwor
 | I2C-1 | Disponible via overlay | Pin 27 (SDA/GPIOA19) + Pin 28 (SCL/GPIOA18) |
 | SPI-0 | Inactif (overlay absent) | Pin 19/21/23/24 — à activer |
 | UART | Disponibles | Pins 8/10 (UART1), 11/22 (UART2), etc. |
-| Microphone embarqué | **Inactif** | Codec `sun8i_codec_analog` builtin mais overlay DT absent |
+| Microphone embarqué | **Actif** ✓ | Codec `sun8i_codec_analog` + overlay activé depuis build |
 | Sortie 3.5mm A/V | Sortie seulement | Composite video + audio out |
 | USB 2.0 (×3) | Actif | Pour Pi Pico ou USB audio |
 | Micro USB OTG | Actif | Gadget NCM (172.22.1.1) |
@@ -111,14 +112,13 @@ Nécessite d'activer SPI-0 dans armbianEnv.txt (overlay à créer).
 
 ---
 
-### 5. Microphone ALSA (en attente — fix codec nécessaire)
+### 5. Microphone ALSA — **actif** ✓
 | Spec | Valeur |
 |------|--------|
 | Résolution | 16-bit |
 | Vitesse | 44100 SPS → jusqu'à ~22kHz |
 | Plage | Signal AC uniquement (couplage capacitif) |
-| État | Codec `sun8i_codec_analog` builtin mais overlay DT absent |
-| Fix | Créer overlay DT pour sun8i-h3 + activer dans armbianEnv.txt |
+| État | **Actif** — overlay DT `sun8i-h3-analog-codec` ajouté dans build |
 
 ---
 
@@ -131,85 +131,103 @@ Signal 440Hz + 1320Hz, bruit aléatoire. Utilisé quand aucun backend hardware n
 
 ```
 /opt/adnrpi-scope/
-├── main.py             — Config Kivy (800×480, borderless, cursor)
-├── scope_screen.py     — UI : header / waveform / mesures / contrôles
-├── audio_capture.py    — Backends : Pico, INA219, ADS1115, MIC, Dummy
-└── launch.sh           — Xrandr + python3 (même logique que HackPad)
+├── main.py              — Config Kivy (800×480, borderless), ScreenManager
+├── scope_screen.py      — Oscilloscope : waveform, mesures, contrôles, FFT, persistence
+├── meter_screen.py      — Multimètre INA219 : V/A/W, min/max, compteur Wh
+├── i2c_screen.py        — Scanner I2C-0/I2C-1, grille 0x00-0x7F, noms composants
+├── uart_screen.py       — Terminal UART : port/baud cycle, hex mode, scroll
+├── settings_screen.py   — Réglages : source, shunt, offset, thème, langue
+├── nav_menu.py          — Popup navigation partagé entre tous les écrans
+├── audio_capture.py     — Backends : Pico, INA219, ADS1115, MIC, Dummy
+├── settings_manager.py  — Persistance JSON + palettes couleurs + langue
+├── strings.py           — Traductions FR/EN
+└── launch.sh            — Xrandr + python3
 ```
+
+**Navigation :** Bouton `[Menu]` dans chaque écran ouvre une popup modale (ModalView)
+avec les 5 destinations. L'écran courant est grisé/désactivé dans le menu.
 
 **Kivy layout 800×480 :**
 ```
-┌────────────────────────────────────────────────────┐ 52px
-│ [<]  ADNRPi SCOPE          CH: SIM    [■ STOP]    │
-├────────────────────────────────────────────────────┤
-│                                                    │
-│         Grille 10×8 + waveform (Canvas)            │ 320px
-│         Ligne trigger jaune (ajustable)            │
-│                                                    │
-├─────────┬──────────┬──────────┬────────────────────┤ 44px
-│Vpp:---  │Vrms:---  │Freq:---  │T:---               │
-├─────────┴──────────┴──────────┴────────────────────┤ 60px
-│[T/div: – 5ms +]  [V/div: – 1.00 +]  [Trig: – 0.00 +]│
-└────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┬──────────────┐ 46px header
+│ [* MIC] AUTO  ^ RISE  5ms/div  1V/div  DC  [mode]  [■ STOP]       │
+├──────────────────────────────────────────────────────┤   T/div      │
+│                                                      │   V/div      │
+│         Waveform + grille 10×8 (Canvas)              │   Trigger    │
+│         Ligne trigger jaune (ajustable)              │   Slope      │
+│         Zone geste gauche = V-offset                 │   Mode       │
+│         Zone geste droite = trigger                  │   Coupling   │
+│                                                      │   Options    │
+├──────────────────────────────────────────────────────┤  [Menu]      │ 160px panel
+│ Vmax  Vmin  Vpp   Vrms  Mean                         │  [< Quit]    │
+│ Freq  Period Duty  Trig  SIM/kS/s                    │              │ 54px mesures
+└──────────────────────────────────────────────────────┴──────────────┘
 ```
 
-**Détection fréquence :** passages à zéro (montants) → médiane des périodes.  
-**Défilement :** 25 FPS, buffer limité à 3 secondes.
-
 ---
 
-## Modes prévus
-
-| Mode | Backend | Affichage |
-|------|---------|-----------|
-| Oscilloscope | Pico / ADS1115 / MCP3208 / MIC | Waveform + Vpp/Vrms/Freq |
-| Multimètre | INA219 | Tension (V) + Courant (A) + Puissance (W) |
-| Analyseur FFT | Pico / MIC | Spectre fréquence en barres |
-
-Le mode multimètre INA219 sera un écran séparé (`meter_screen.py`), accessible depuis le menu principal de l'app.
-
----
-
-## État d'avancement
+## État d'avancement (2026-09-30)
 
 | Tâche | État |
 |-------|------|
-| UI Kivy (scope_screen.py) | ✓ Codé |
+| UI Kivy (scope_screen.py) | ✓ **Validé** — layout 800×480 OK |
 | Backend DummyCapture | ✓ Codé |
-| Backend AudioCapture (ALSA) | ✓ Codé (inactif — codec absent) |
-| Backend ADS1115 (I2C) | ✓ Codé (composant non disponible) |
+| Backend AudioCapture (ALSA) | ✓ **Validé** — CH: MIC actif |
+| Backend ADS1115 (I2C) | ✓ Codé (composant à commander ~2€) |
 | Backend PicoCapture (USB) | ✓ Codé (Pico non connecté) |
-| Backend INA219 (multimètre) | ⬜ À coder (`meter_screen.py`) |
-| Backend MCP3208 (SPI) | ⬜ À coder (SPI à activer + composant) |
-| Test UI DummyCapture sur SmartPi | 🔄 En cours (2026-09-29) |
-| Fix codec audio H3 (overlay DT) | ⬜ À étudier |
-| Mode multimètre INA219 | ⬜ À coder |
-| Intégration dans build GitHub | ⬜ Après validation sur carte |
+| Backend MCP3208 (SPI) | ⬜ À coder (SPI à activer + composant ~2€) |
+| Mode multimètre INA219 | ✓ **Validé** — V/A/W/Wh, min/max, shunt sélectionnable |
+| Compteur Wh INA219 (M3) | ✓ **Codé** — intégration P×dt, reset bouton RST |
+| Sélecteur source oscillo | ✓ **Validé** — bouton cycle * MIC/PICO/SIM |
+| Source PICO dynamique (B2) | ✓ **Codé** — PICO toujours visible, désactivé si absent |
+| Affichage SIM au lieu kS/s (B3) | ✓ **Codé** — barre mesures affiche "SIM" |
+| Gestes tactile (T/div, trigger, V-offset) | ✓ **Validé** — direction-lock single-touch |
+| Buffer STOP + navigation | ✓ **Validé** — glisser H en mode STOP |
+| FFT/Spectre (M1) | ✓ **Codé** — dB scale, barres colorées, fond bleu, marqueur pic |
+| Persistance waveform (M2) | ✓ **Codé** — 8 sweeps fondu alpha, fond violet |
+| Bouton Vue cycle (NORM/FFT/PST) | ✓ **Codé** — 1 bouton, 3 modes, couleurs distinctes |
+| Écran Settings | ✓ **Validé** — source, shunt, offset, thème, langue |
+| Langue FR/EN (nouveau) | ✓ **Codé** — strings.py, redémarrage sur changement |
+| I2C Scanner (R3) | ✓ **Validé** — scan auto + noms connus + grille 16×8 |
+| UART Monitor (M4) | ✓ **Codé** — port/baud cycle, hex mode, scroll, /dev/ttyACM0 |
+| Navigation multi-écrans (nav_menu) | ✓ **Validé** — popup [Menu] dans tous les écrans |
+| Suppression bouton [S] doublon | ✓ **Nettoyé** — navigation via [Menu] uniquement |
+| ADNRPi Scope comme app séparée | ✓ **Validé** — indépendant de HackPad |
+| Micro-lanceur boot (Scope/HackPad/Eteindre) | ✓ **Validé** — startup-app sauvegardé |
+| Service systemd adnrpi-launcher | ✓ **Validé** — remplace adnrpi-hackpad.service |
+| Fix codec audio H3 (overlay DT) | ✓ **Validé** (2026-09-29) |
+| Intégration dans build GitHub | ⬜ Après validation complète sur carte |
 
 ---
 
-## Fix codec audio H3 (notes techniques)
+## Backlog restant
 
-Le module `sun8i_codec_analog` est compilé dans le noyau Armbian (`builtin`).
-Il ne s'active que si le nœud device tree correspondant est présent.
+### Infrastructure
+| # | Tâche | Notes |
+|---|-------|-------|
+| R1 | **Thèmes Blue/HiContrast** | Palettes codées dans settings_manager mais scope+meter utilisent toujours les couleurs hardcodées |
+| R2 | **< Quitter → lanceur** | Écrit `/tmp/adnrpi-next = launcher`, fonctionne si lanceur installé |
 
-Pour l'activer :
-1. Créer un overlay DTS `sun8i-h3-analog-codec.dts` avec le nœud codec et la route MIC
-2. Compiler en `.dtbo` avec `dtc`
-3. Copier dans `/boot/overlay-user/`
-4. Ajouter `overlays=analog-codec` dans `armbianEnv.txt`
-5. Redémarrer → `arecord -l` doit montrer le périphérique
+### Hardware (nécessite composants)
+| # | Tâche | Notes |
+|---|-------|-------|
+| H1 | **Backend MCP3208 SPI** | ~2€, activer SPI-0 + overlay armbianEnv.txt |
+| H2 | **ADS1115 réel** | ~2€, déjà codé, à tester avec composant physique |
 
-Le nœud DTS requis (à vérifier dans le DTB H3 de base) :
-```dts
-&codec {
-    status = "okay";
-    allwinner,audio-routing =
-        "Line Out", "LINEOUT",
-        "MIC1", "Mic",
-        "Mic", "HBIAS";
-};
-```
+### Gros (nécessite Pico)
+| # | Tâche | Notes |
+|---|-------|-------|
+| P1 | **Analyseur logique 8 voies** | Firmware MicroPython Pico + chronogramme UI |
+| P2 | **Générateur de signaux** | Pico PWM + filtre RC, freq/forme/amplitude depuis UI |
+
+### Roadmap étendue
+| Phase | Mode | Description |
+|-------|------|-------------|
+| V1 | Oscilloscope + Multimètre | **Fait** |
+| V2 | Analyseur logique | Nécessite Pico |
+| V3 | Générateur de signaux | Nécessite Pico |
+| V4 | Analyseur de puissance | Extension INA219 (Wh déjà codé) |
+| V5 | Mode Robot Debug | PWM moteurs + courant + encodeurs + IMU |
 
 ---
 
@@ -219,7 +237,7 @@ Le nœud DTS requis (à vérifier dans le DTB H3 de base) :
 # Lancer le scope manuellement
 rm -f /tmp/.X0-lock; xinit /opt/adnrpi-scope/launch.sh -- :0 vt1 -nolisten tcp
 
-# Logs
+# Logs en direct
 tail -f /tmp/scope.log
 
 # Arrêter
@@ -228,6 +246,29 @@ killall xinit
 # Vérifier I2C
 i2cdetect -y 0   # scan I2C-0 (doit voir 0x40 si INA219 branché)
 
-# Revenir à HackPad
-systemctl start adnrpi-hackpad.service
+# SSH deploy (depuis Windows)
+pscp -pw pi scripts/scope/*.py root@192.168.1.89:/opt/adnrpi-scope/
+plink -batch -pw pi root@192.168.1.89 "kill PID; DISPLAY=:0 nohup python3 /opt/adnrpi-scope/main.py > /tmp/scope.log 2>&1 &"
+```
+
+---
+
+## Activation micro H3 dans le build GitHub
+
+**✓ Résolu le 2026-09-29** — Le `.dtbo` `sun8i-h3-analog-codec` est déjà fourni par Armbian.
+
+### Ce qui a été ajouté dans `userpatches/customize-image.sh`
+
+```bash
+# Dans la fonction installHackPad() — en fin de fonction
+if grep -q "^overlay_prefix=sun8i-h3" /boot/armbianEnv.txt; then
+    if ! grep -q "analog-codec" /boot/armbianEnv.txt; then
+        sed -i '/^overlay_prefix=sun8i-h3/a overlays=analog-codec' /boot/armbianEnv.txt
+    fi
+fi
+amixer -c 0 cset numid=18 1   # Mic1 Capture Switch → on
+amixer -c 0 cset numid=8  3   # Mic1 Boost → 27dB
+amixer -c 0 cset numid=9  7   # ADC Gain → max
+amixer -c 0 cset numid=15 1   # Mixer Capture Switch → on
+alsactl store 0                # → /var/lib/alsa/asound.state (persiste au reboot)
 ```

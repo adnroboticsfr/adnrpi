@@ -28,10 +28,15 @@ Config.set("kivy",     "keyboard_mode", "")
 from kivy.app import App
 from kivy.uix.screenmanager import ScreenManager, NoTransition
 from kivy.core.window import Window
-
-Window.clearcolor = (0.04, 0.04, 0.04, 1)
+import settings_manager as _SM
+_SM.load()
+Window.clearcolor = _SM.get_palette()["BG"]
 
 from scope_screen import ScopeScreen
+from meter_screen import MeterScreen
+from settings_screen import SettingsScreen
+from i2c_screen import I2CScreen
+from uart_screen import UartScreen
 
 
 class OscilloApp(App):
@@ -40,6 +45,10 @@ class OscilloApp(App):
     def build(self):
         sm = ScreenManager(transition=NoTransition())
         sm.add_widget(ScopeScreen(name="scope"))
+        sm.add_widget(MeterScreen(name="meter"))
+        sm.add_widget(SettingsScreen(name="settings"))
+        sm.add_widget(I2CScreen(name="i2c"))
+        sm.add_widget(UartScreen(name="uart"))
         return sm
 
 

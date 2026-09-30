@@ -258,43 +258,59 @@ class DummyCapture:
         return "SIM"
 
 
-# ── Sélection automatique ─────────────────────────────────────────────────────
+# ── Sélection ─────────────────────────────────────────────────────────────────
 
-def make_capture():
-    """Essaie les backends dans l'ordre et retourne (capture, label)."""
+def make_capture(source=None):
+    """Retourne (capture, label).
 
-    # 1. Pi Pico USB
-    if os.path.exists("/dev/ttyACM0"):
+    source=None  → auto-détection (ordre : PICO > ADS1115 > MIC > SIM)
+    source="MIC"  → ALSA microphone
+    source="PICO" → Pi Pico USB serial
+    source="SIM"  → signal synthétique
+    """
+
+    # Sélection explicite
+    if source == "MIC":
+        try:
+            import sounddevice as sd
+            c = AudioCapture()
+            c.start()
+            return c, "MIC"
+        except Exception:
+            pass
+        c = DummyCapture(); c.start(); return c, "SIM"
+
+    if source == "PICO":
         try:
             c = PicoCapture()
             c.start()
             return c, "PICO"
         except Exception:
             pass
+        c = DummyCapture(); c.start(); return c, "SIM"
 
-    # 2. ADS1115 I2C
-    if os.path.exists("/dev/i2c-0"):
+    if source == "SIM":
+        c = DummyCapture(); c.start(); return c, "SIM"
+
+    # Auto-détection
+    if os.path.exists("/dev/ttyACM0"):
         try:
-            import smbus2
-            c = ADS1115Capture()
-            c.start()
-            return c, "ADS1115"
+            c = PicoCapture(); c.start(); return c, "PICO"
         except Exception:
             pass
 
-    # 3. Microphone ALSA
+    if os.path.exists("/dev/i2c-0"):
+        try:
+            import smbus2
+            c = ADS1115Capture(); c.start(); return c, "ADS1115"
+        except Exception:
+            pass
+
     try:
         import sounddevice as sd
-        devs = sd.query_devices()
-        has_input = any(d["max_input_channels"] > 0 for d in devs)
-        if has_input:
-            c = AudioCapture()
-            c.start()
-            return c, "MIC"
+        if any(d["max_input_channels"] > 0 for d in sd.query_devices()):
+            c = AudioCapture(); c.start(); return c, "MIC"
     except Exception:
         pass
 
-    # 4. Dummy synthétique
-    c = DummyCapture()
-    c.start()
-    return c, "SIM"
+    c = DummyCapture(); c.start(); return c, "SIM"

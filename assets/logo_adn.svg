@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+
+  <!-- Fond sombre -->
+  <rect width="512" height="512" fill="#08080F" rx="28"/>
+
+  <!-- Grille circuit (fond) -->
+  <g stroke="#0E1A0E" stroke-width="1" opacity="0.8">
+    <line x1="0"   y1="64"  x2="512" y2="64"/>
+    <line x1="0"   y1="128" x2="512" y2="128"/>
+    <line x1="0"   y1="384" x2="512" y2="384"/>
+    <line x1="0"   y1="448" x2="512" y2="448"/>
+    <line x1="64"  y1="0"   x2="64"  y2="512"/>
+    <line x1="128" y1="0"   x2="128" y2="512"/>
+    <line x1="384" y1="0"   x2="384" y2="512"/>
+    <line x1="448" y1="0"   x2="448" y2="512"/>
+  </g>
+
+  <!-- Traces circuit déco (coins) -->
+  <g stroke="#14FF50" stroke-width="2" fill="none" opacity="0.35">
+    <!-- coin haut-gauche -->
+    <polyline points="32,80  32,48  80,48"/>
+    <circle cx="32" cy="48" r="4" fill="#14FF50"/>
+    <circle cx="80" cy="48" r="3" fill="none" stroke="#14FF50"/>
+    <!-- coin haut-droit -->
+    <polyline points="480,80  480,48  432,48"/>
+    <circle cx="480" cy="48" r="4" fill="#14FF50"/>
+    <circle cx="432" cy="48" r="3" fill="none" stroke="#14FF50"/>
+    <!-- coin bas-gauche -->
+    <polyline points="32,432  32,464  80,464"/>
+    <circle cx="32" cy="464" r="4" fill="#14FF50"/>
+    <circle cx="80" cy="464" r="3" fill="none" stroke="#14FF50"/>
+    <!-- coin bas-droit -->
+    <polyline points="480,432  480,464  432,464"/>
+    <circle cx="480" cy="464" r="4" fill="#14FF50"/>
+    <circle cx="432" cy="464" r="3" fill="none" stroke="#14FF50"/>
+  </g>
+
+  <!-- Signal oscilloscope déco (haut) -->
+  <polyline
+    points="48,108  90,108  110,76  130,140  150,76  170,140  190,108  464,108"
+    stroke="#14FF50" stroke-width="2" fill="none" opacity="0.5"/>
+
+  <!-- Texte principal ADN -->
+  <text x="256" y="248"
+        font-family="'Courier New', Courier, monospace"
+        font-size="148" font-weight="bold"
+        fill="#14FF50"
+        text-anchor="middle"
+        letter-spacing="-4">ADN</text>
+
+  <!-- Séparateur -->
+  <line x1="72" y1="272" x2="440" y2="272" stroke="#14FF50" stroke-width="1.5" opacity="0.4"/>
+
+  <!-- Sous-titre ROBOTICS -->
+  <text x="256" y="326"
+        font-family="'Courier New', Courier, monospace"
+        font-size="48" font-weight="bold"
+        fill="#20D4FF"
+        text-anchor="middle"
+        letter-spacing="10">ROBOTICS</text>
+
+  <!-- Tag version / plateforme -->
+  <text x="256" y="382"
+        font-family="'Courier New', Courier, monospace"
+        font-size="22"
+        fill="#334433"
+        text-anchor="middle"
+        letter-spacing="3">SmartPi One  ·  H3  ·  Armbian</text>
+
+  <!-- Signal oscilloscope déco (bas) -->
+  <polyline
+    points="48,404  90,404  110,372  130,436  150,372  170,436  190,404  464,404"
+    stroke="#20D4FF" stroke-width="2" fill="none" opacity="0.4"/>
+
+  <!-- Point d'accent vert (LED power) -->
+  <circle cx="256" cy="468" r="5" fill="#14FF50" opacity="0.7"/>
+  <circle cx="256" cy="468" r="10" fill="none" stroke="#14FF50" stroke-width="1" opacity="0.3"/>
+
+</svg>

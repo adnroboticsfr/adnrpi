@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ADNRPi — Hub</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #08080F;
+      color: #c8c8d8;
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+    .logo-adn {
+      font-size: 64px;
+      font-weight: bold;
+      color: #14FF50;
+      letter-spacing: -2px;
+      line-height: 1;
+    }
+    .logo-sub {
+      font-size: 18px;
+      color: #20D4FF;
+      letter-spacing: 8px;
+      margin-top: 4px;
+    }
+    .logo-hw {
+      font-size: 12px;
+      color: #334;
+      letter-spacing: 3px;
+      margin-top: 8px;
+    }
+    .osc-line {
+      width: 320px;
+      height: 24px;
+      margin: 16px auto 0;
+    }
+
+    /* ── Grid services ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      width: 100%;
+      max-width: 900px;
+      margin-bottom: 40px;
+    }
+
+    .card {
+      background: #0d0d18;
+      border: 1px solid #1a1a2e;
+      border-radius: 8px;
+      padding: 24px 20px;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.2s, background 0.2s;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .card:hover {
+      border-color: #14FF50;
+      background: #0d0d20;
+    }
+    .card-icon  { font-size: 28px; }
+    .card-title { font-size: 16px; font-weight: bold; color: #e0e0f0; }
+    .card-desc  { font-size: 12px; color: #556; line-height: 1.5; }
+    .card-port  {
+      font-size: 11px; color: #20D4FF;
+      background: #0a1520; border-radius: 4px;
+      padding: 2px 8px; align-self: flex-start; margin-top: 4px;
+    }
+
+    .card.green  { border-left: 3px solid #14FF50; }
+    .card.cyan   { border-left: 3px solid #20D4FF; }
+    .card.orange { border-left: 3px solid #FF8C00; }
+    .card.purple { border-left: 3px solid #9966FF; }
+
+    /* ── Stat bar ── */
+    .stats {
+      width: 100%;
+      max-width: 900px;
+      background: #0d0d18;
+      border: 1px solid #1a1a2e;
+      border-radius: 8px;
+      padding: 16px 20px;
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+      font-size: 12px;
+      color: #556;
+    }
+    .stat span { color: #14FF50; font-weight: bold; }
+
+    /* ── Footer ── */
+    footer {
+      margin-top: 48px;
+      font-size: 11px;
+      color: #222;
+      text-align: center;
+      letter-spacing: 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <!-- Signal oscilloscope SVG déco -->
+    <svg class="osc-line" viewBox="0 0 320 24" xmlns="http://www.w3.org/2000/svg">
+      <polyline points="0,12 40,12 55,4 70,20 85,4 100,20 115,12 320,12"
+                stroke="#14FF50" stroke-width="1.5" fill="none" opacity="0.5"/>
+    </svg>
+    <div class="logo-adn">ADN</div>
+    <div class="logo-sub">ROBOTICS</div>
+    <div class="logo-hw">SmartPi One · H3 · Armbian Bookworm</div>
+  </header>
+
+  <div class="grid">
+
+    <a class="card green" href="/admin/" target="_blank">
+      <div class="card-icon">⚙️</div>
+      <div class="card-title">Administration</div>
+      <div class="card-desc">
+        Cockpit — CPU, RAM, disque, température,
+        services systemd, terminal navigateur, logs.
+      </div>
+      <div class="card-port">:9090 / /admin</div>
+    </a>
+
+    <a class="card cyan" href="/git/" target="_blank">
+      <div class="card-icon">📦</div>
+      <div class="card-title">Gitea</div>
+      <div class="card-desc">
+        Dépôts Git privés locaux.
+        Créer, cloner, pousser sans passer par GitHub.
+      </div>
+      <div class="card-port">:3000 / /git</div>
+    </a>
+
+    <a class="card orange" href="/scope/" target="_blank">
+      <div class="card-icon">📡</div>
+      <div class="card-title">Scope Monitor</div>
+      <div class="card-desc">
+        Logs et statut de l'application oscilloscope
+        ADNRPi Scope (Kivy).
+      </div>
+      <div class="card-port">:8080 / /scope</div>
+    </a>
+
+    <a class="card purple" href="/files/" target="_blank">
+      <div class="card-icon">🗂️</div>
+      <div class="card-title">Fichiers</div>
+      <div class="card-desc">
+        Navigateur de fichiers web — transférer,
+        télécharger, gérer les fichiers du SmartPi.
+      </div>
+      <div class="card-port">:8081 / /files</div>
+    </a>
+
+  </div>
+
+  <!-- Barre de stats dynamique -->
+  <div class="stats" id="stats">
+    <div>IP : <span id="ip">—</span></div>
+    <div>Charge : <span id="load">—</span></div>
+    <div>RAM libre : <span id="mem">—</span></div>
+    <div>Disque : <span id="disk">—</span></div>
+    <div>Uptime : <span id="uptime">—</span></div>
+  </div>
+
+  <footer>ADN ROBOTICS · GitHub local · réseau privé</footer>
+
+  <script>
+    // Récupère les stats depuis l'API légère /api/stats
+    async function refreshStats() {
+      try {
+        const r = await fetch('/api/stats');
+        if (!r.ok) return;
+        const d = await r.json();
+        document.getElementById('ip').textContent     = d.ip     || '—';
+        document.getElementById('load').textContent   = d.load   || '—';
+        document.getElementById('mem').textContent    = d.mem    || '—';
+        document.getElementById('disk').textContent   = d.disk   || '—';
+        document.getElementById('uptime').textContent = d.uptime || '—';
+      } catch(e) {}
+    }
+    refreshStats();
+    setInterval(refreshStats, 10000);
+  </script>
+
+</body>
+</html>

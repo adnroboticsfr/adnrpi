@@ -1,0 +1,18 @@
+[Unit]
+Description=ADNRPi Launcher — choix et demarrage de l'application (tty1)
+After=systemd-udevd.service local-fs.target adnrpi-firstboot.service
+ConditionPathExists=/opt/adnrpi-launcher/run.sh
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/adnrpi-launcher
+Environment=HOME=/root
+ExecStartPre=/bin/sh -c 'rm -f /tmp/.X0-lock /tmp/.X11-unix/X0'
+ExecStart=/usr/bin/xinit /opt/adnrpi-launcher/run.sh \
+    -- :0 vt1 -nolisten tcp
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

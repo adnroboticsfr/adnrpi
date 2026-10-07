@@ -1,0 +1,13 @@
+# CH57x USB HID bridge — ADNRPi One 4.3" capacitive touchscreen
+# Jiangsu Qinheng VID=1a86, PID=e5e3 (CH57x I2C→USB HID bridge on the YUMI screen)
+# Without ID_INPUT_TOUCHSCREEN=1 libinput ignores absolute coordinates.
+ACTION=="add|change", SUBSYSTEM=="input", \
+    ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="e5e3", \
+    ENV{ID_INPUT}="1", ENV{ID_INPUT_TOUCHSCREEN}="1"
+
+# Disable USB autosuspend for the CH57x: autosuspend can cause brief power cuts
+# on the USB bus that make the bridge disconnect mid-session, especially when
+# another USB cable is plugged in (inrush current spikes the 5V rail).
+ACTION=="add", SUBSYSTEM=="usb", \
+    ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="e5e3", \
+    RUN+="/bin/sh -c 'echo -1 > /sys$env{DEVPATH}/power/autosuspend_delay_ms'"

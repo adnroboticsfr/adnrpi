@@ -1,0 +1,117 @@
+#!/bin/sh
+# adnrpi-screen — veille/réveil de l'écran YUMI 4.3" sans support DPMS
+#
+# L'écran YUMI a deux alimentations :
+#   - HDMI : signal vidéo (H3 → SiI9612 → connecteur HDMI)
+#   - USB-A : rétroéclairage + CH57x touchscreen (5V via hub USB)
+#
+# Stratégie "off" :
+#   1. Éteindre le framebuffer kernel (console vide, pas de pixels envoyés)
+#   2. Suspendre le périphérique USB CH57x (coupe le bus USB de l'écran,
+#      ce qui sur la plupart des panneaux coupe le rétroéclairage)
+#   3. Si X11 actif : xrandr --output HDMI-1 --off
+#
+# Stratégie "on" :
+#   1. Rallumer le framebuffer
+#   2. Réactiver le périphérique USB CH57x
+#   3. Si X11 actif : xrandr --output HDMI-1 --auto
+#
+# Usage : adnrpi-screen [off|on|status]
+
+CH57X_VID="1a86"
+CH57X_PID="e5e3"
+STATE_FILE="/run/adnrpi-screen.state"
+
+# --- helpers ---
+
+fb_blank() {
+    for fb in /sys/class/graphics/fb*; do
+        [ -f "${fb}/blank" ] && echo "$1" > "${fb}/blank" 2>/dev/null
+    done
+}
+
+find_usb_device() {
+    for dev in /sys/bus/usb/devices/*; do
+        vid="${dev}/idVendor"
+        pid="${dev}/idProduct"
+        [ -f "$vid" ] || continue
+        [ "$(cat "$vid" 2>/dev/null)" = "${CH57X_VID}" ] || continue
+        [ "$(cat "$pid" 2>/dev/null)" = "${CH57X_PID}" ] || continue
+        echo "$dev"
+        return 0
+    done
+    return 1
+}
+
+usb_suspend() {
+    dev=$(find_usb_device) || return
+    echo auto > "${dev}/power/control" 2>/dev/null
+    echo 0    > "${dev}/power/autosuspend_delay_ms" 2>/dev/null
+}
+
+usb_resume() {
+    dev=$(find_usb_device) || return
+    echo on > "${dev}/power/control" 2>/dev/null
+    # Restore autosuspend-disabled (same as udev rule)
+    echo -1 > "${dev}/power/autosuspend_delay_ms" 2>/dev/null
+}
+
+x11_cmd() {
+    # Try to find an active X display; run xrandr if available
+    command -v xrandr >/dev/null 2>&1 || return
+    for disp in :0 :1; do
+        if DISPLAY="${disp}" xrandr --listmonitors >/dev/null 2>&1; then
+            DISPLAY="${disp}" xrandr --output HDMI-1 "$1" 2>/dev/null || true
+            return
+        fi
+    done
+}
+
+# --- commands ---
+
+screen_off() {
+    echo "Mise en veille écran..."
+    fb_blank 1
+    usb_suspend
+    x11_cmd --off
+    echo "off" > "${STATE_FILE}"
+    echo "Écran en veille. 'adnrpi-screen on' pour réveiller."
+}
+
+screen_on() {
+    echo "Réveil écran..."
+    fb_blank 0
+    usb_resume
+    x11_cmd --auto
+    echo "on" > "${STATE_FILE}"
+    echo "Écran actif."
+}
+
+screen_status() {
+    state=$(cat "${STATE_FILE}" 2>/dev/null || echo "on")
+    echo "État écran : ${state}"
+    dev=$(find_usb_device)
+    if [ -n "$dev" ]; then
+        ctrl=$(cat "${dev}/power/control" 2>/dev/null)
+        echo "CH57x USB : trouvé (power/control=${ctrl})"
+    else
+        echo "CH57x USB : non trouvé"
+    fi
+    for fb in /sys/class/graphics/fb*; do
+        [ -f "${fb}/blank" ] && echo "$(basename $fb)/blank : $(cat ${fb}/blank)"
+    done
+}
+
+case "${1:-status}" in
+    off|sleep|blank)  screen_off    ;;
+    on|wake|unblank)  screen_on     ;;
+    status)           screen_status ;;
+    toggle)
+        state=$(cat "${STATE_FILE}" 2>/dev/null || echo "on")
+        if [ "$state" = "off" ]; then screen_on; else screen_off; fi
+        ;;
+    *)
+        echo "Usage: adnrpi-screen [on|off|toggle|status]" >&2
+        exit 1
+        ;;
+esac

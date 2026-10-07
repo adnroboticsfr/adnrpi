@@ -47,6 +47,9 @@ Main() {
                     trixie|forky|sid) installChromiumFlags ;;
                 esac
             fi
+            installCH57xTouchscreen
+            installScreenSleep
+            installIRSupport
             # ADNRPI_ROS n'est pas transmis au chroot — détection via marqueur
             if [[ "${ADNRPI_ROS}" == "ros2" ]] || [[ -f /tmp/overlay/.adnrpi-ros2 ]]; then
                 case "${RELEASE}" in
@@ -153,6 +156,46 @@ installOverclockControl() {
     cp -v /tmp/overlay/adnrpi-oc /usr/local/bin/adnrpi-oc
     chmod 755 /usr/local/bin/adnrpi-oc
     echo "Install overclock control ... [DONE]"
+}
+
+installCH57xTouchscreen() {
+    # The YUMI 4.3" panel uses a CH57x (VID=1a86, PID=e5e3) as an I2C→USB HID
+    # bridge for the capacitive touchscreen. Without this udev rule libinput
+    # never sees ID_INPUT_TOUCHSCREEN=1 and ignores absolute coordinates.
+    # The rule also disables USB autosuspend to prevent disconnect spikes when
+    # another USB cable is plugged in (inrush current on the 5V rail).
+    echo "Install CH57x touchscreen udev rule ..."
+    mkdir -p /etc/udev/rules.d
+    cp -v /tmp/overlay/70-ch57x-touch.rules /etc/udev/rules.d/70-ch57x-touch.rules
+    chmod 644 /etc/udev/rules.d/70-ch57x-touch.rules
+    # USB_QUIRK_RESET (0x0400): force a clean USB reset on each reconnect instead
+    # of reusing potentially corrupted device state after a power-rail glitch.
+    echo 'options usbcore quirks=1a86:e5e3:0x0400' \
+        > /etc/modprobe.d/adnrpi-ch57x-quirk.conf
+    echo "Install CH57x touchscreen udev rule ... [DONE]"
+}
+
+installScreenSleep() {
+    # adnrpi-screen on/off/toggle/status — screen sleep without DPMS.
+    # The YUMI 4.3" panel has no DPMS; we blank the framebuffer and suspend
+    # the CH57x USB device (which cuts the backlight on most panels that draw
+    # their 5V from the same USB bus).
+    echo "Install adnrpi-screen (screen sleep/wake) ..."
+    cp -v /tmp/overlay/adnrpi-screen /usr/local/bin/adnrpi-screen
+    chmod 755 /usr/local/bin/adnrpi-screen
+    echo "Install adnrpi-screen ... [DONE]"
+}
+
+installIRSupport() {
+    # The H3 hardware IR receiver (GPIOL11 = r_ir_rx_pin, enabled in DTS) needs
+    # the NEC protocol decoder loaded at boot. ir-keytable handles this; we
+    # install a oneshot systemd unit that runs ir-keytable -p NEC on /dev/rc0.
+    echo "Install IR receiver support (NEC protocol) ..."
+    apt-get install -y --no-install-recommends ir-keytable
+    cp -v /tmp/overlay/adnrpi-ir.service /etc/systemd/system/adnrpi-ir.service
+    chmod 644 /etc/systemd/system/adnrpi-ir.service
+    systemctl enable adnrpi-ir.service
+    echo "Install IR receiver support ... [DONE]"
 }
 
 installUsbGadgetNet() {
@@ -671,6 +714,26 @@ TOUCHEOF
           /etc/systemd/system/getty@tty1.service.d/hackpad.conf
     chmod 644 /etc/systemd/system/getty@tty1.service.d/hackpad.conf
     systemctl daemon-reload
+
+    # ── Codec audio H3 — active le micro embarqué ─────────────────────────────
+    # Le .dtbo sun8i-h3-analog-codec est déjà fourni par Armbian.
+    # Il suffit d'ajouter overlays=analog-codec dans armbianEnv.txt.
+    if [ -f /boot/armbianEnv.txt ]; then
+        if grep -q "^overlay_prefix=sun8i-h3" /boot/armbianEnv.txt; then
+            if ! grep -q "analog-codec" /boot/armbianEnv.txt; then
+                sed -i '/^overlay_prefix=sun8i-h3/a overlays=analog-codec' /boot/armbianEnv.txt
+                echo "Codec audio H3 : overlay analog-codec ajouté"
+            fi
+        fi
+    fi
+    # Config ALSA : active Mic1 et le routage vers l'ADC (persiste via asound.state)
+    # Les commandes amixer tournent dans le chroot, alsactl store génère /var/lib/alsa/asound.state
+    amixer -c 0 cset numid=18 1 2>/dev/null   # Mic1 Capture Switch → on
+    amixer -c 0 cset numid=8  3 2>/dev/null   # Mic1 Boost → 27 dB
+    amixer -c 0 cset numid=9  7 2>/dev/null   # ADC Gain → max
+    amixer -c 0 cset numid=15 1 2>/dev/null   # Mixer Capture Switch → on
+    alsactl store 0 2>/dev/null && echo "ALSA Mic1 config sauvegardée" \
+        || echo "WARN: alsactl store échoué (normal si pas de soundcard en chroot)"
 
     echo "Installing HackPad ... [DONE]"
 }

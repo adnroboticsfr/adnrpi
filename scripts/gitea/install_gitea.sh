@@ -21,8 +21,9 @@
 set -e
 
 # ── Configuration ─────────────────────────────────────────────────────────────
-GITEA_VERSION="1.22.3"
-GITEA_BIN_URL="https://dl.gitea.com/gitea/${GITEA_VERSION}/gitea-${GITEA_VERSION}-linux-arm-7"
+# Gitea a abandonné arm-7 à partir de v28 — arm-6 fonctionne sur H3 (ARMv7 compatible)
+GITEA_VERSION="28.0.0"
+GITEA_BIN_URL="https://github.com/go-gitea/gitea/releases/download/v${GITEA_VERSION}/gitea-${GITEA_VERSION}-linux-arm-6"
 GITEA_BIN="/usr/local/bin/gitea"
 GITEA_HOME="/opt/gitea"
 GITEA_USER="git"

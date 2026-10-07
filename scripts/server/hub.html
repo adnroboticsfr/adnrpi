@@ -129,14 +129,14 @@
 
   <div class="grid">
 
-    <a class="card green" href="/admin/" target="_blank">
+    <a class="card green" id="card-admin" href="" target="_blank">
       <div class="card-icon">⚙️</div>
       <div class="card-title">Administration</div>
       <div class="card-desc">
         Cockpit — CPU, RAM, disque, température,
         services systemd, terminal navigateur, logs.
       </div>
-      <div class="card-port">:9090 / /admin</div>
+      <div class="card-port">:9090</div>
     </a>
 
     <a class="card cyan" href="/git/" target="_blank">
@@ -183,6 +183,12 @@
   <footer>ADN ROBOTICS · GitHub local · réseau privé</footer>
 
   <script>
+    // Lien Cockpit dynamique — même IP que le hub, port 9090
+    (function() {
+      var a = document.getElementById('card-admin');
+      if (a) a.href = 'http://' + location.hostname + ':9090/';
+    })();
+
     // Récupère les stats depuis l'API légère /api/stats
     async function refreshStats() {
       try {

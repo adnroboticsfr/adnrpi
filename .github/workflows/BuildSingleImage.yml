@@ -101,6 +101,27 @@ jobs:
           cp -R -v ./build-configs/boards/* ./build/config/boards
           cp -R -v ./build-configs/userpatches/* ./build/userpatches
 
+      - name: Create build variant markers
+        shell: bash
+        run: |
+          source ./build/userpatches/config-settings.conf 2>/dev/null || true
+          if [[ "${ADNRPI_PENTEST}" == "yes" ]]; then
+            echo "[marker] ADNRPI_PENTEST=yes → .adnrpi-pentest"
+            touch ./build/userpatches/overlay/.adnrpi-pentest
+          fi
+          if [[ "${ADNRPI_ROS}" == "ros2" ]]; then
+            echo "[marker] ADNRPI_ROS=ros2 → .adnrpi-ros2"
+            touch ./build/userpatches/overlay/.adnrpi-ros2
+          fi
+          if [[ "${ADNRPI_ROS}" == "ros1" ]]; then
+            echo "[marker] ADNRPI_ROS=ros1 → .adnrpi-ros1"
+            touch ./build/userpatches/overlay/.adnrpi-ros1
+          fi
+          if [[ "${ADNRPI_ROS_DESKTOP}" == "yes" ]]; then
+            echo "[marker] ADNRPI_ROS_DESKTOP=yes → .adnrpi-ros-desktop"
+            touch ./build/userpatches/overlay/.adnrpi-ros-desktop
+          fi
+
       - name: sed VERSION
         shell: bash
         run: |

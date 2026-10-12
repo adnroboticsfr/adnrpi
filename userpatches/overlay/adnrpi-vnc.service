@@ -1,24 +1,23 @@
 [Unit]
-Description=ADNRPi VNC Server — partage écran HackPad (x11vnc :0)
-After=adnrpi-hackpad.service
-Requires=adnrpi-hackpad.service
+Description=ADNRPi VNC Server — framebuffer /dev/fb0 (x11vnc rawfb)
+After=multi-user.target
 
 [Service]
 Type=simple
 User=root
-Environment=HOME=/root DISPLAY=:0
-# Attendre que Xorg soit prêt
-ExecStartPre=/bin/sh -c 'until DISPLAY=:0 xrandr &>/dev/null; do sleep 1; done'
-# Lancer x11vnc avec mot de passe si /etc/x11vnc.pass existe, sinon sans auth
+# Lecture directe du framebuffer — pas besoin de X11 ni de Xauthority
+# Pour SmartPad (écran rotaté 180°) : ajouter -rotate 180 -scale 1024x600
 ExecStart=/bin/sh -c '\
     if [ -f /etc/x11vnc.pass ]; then \
-        exec x11vnc -display :0 -forever -shared -rfbport 5900 \
-             -xkb -noxrecord -noxfixes -noxdamage \
-             -rfbauth /etc/x11vnc.pass -auth /root/.Xauthority; \
+        exec x11vnc -rawfb /dev/fb0 \
+             -forever -shared -rfbport 5900 \
+             -nocursor \
+             -rfbauth /etc/x11vnc.pass; \
     else \
-        exec x11vnc -display :0 -forever -shared -rfbport 5900 \
-             -xkb -noxrecord -noxfixes -noxdamage \
-             -nopw -auth /root/.Xauthority; \
+        exec x11vnc -rawfb /dev/fb0 \
+             -forever -shared -rfbport 5900 \
+             -nocursor \
+             -nopw; \
     fi'
 Restart=on-failure
 RestartSec=5

@@ -1,0 +1,237 @@
+#!/bin/bash
+# adnrpi-install-usb — Migrate ADNRPi rootfs from SD card to USB / SSD / NVMe
+# Usage : sudo adnrpi-install-usb [--auto /dev/sdX]
+# ─────────────────────────────────────────────────────────────────────────────
+
+if [[ $EUID -ne 0 ]]; then
+    echo "  Lancez en root : sudo adnrpi-install-usb"
+    exit 1
+fi
+
+# ── Terminal colours ──────────────────────────────────────────────────────────
+if [[ -t 1 ]]; then
+    BOLD='\033[1m'; DIM='\033[2m'; NC='\033[0m'
+    CYAN='\033[0;36m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'
+else
+    BOLD=''; DIM=''; NC=''; CYAN=''; GREEN=''; YELLOW=''; RED=''
+fi
+
+header() {
+    clear
+    echo ""
+    echo -e "${BOLD}  ┌─────────────────────────────────────────────┐${NC}"
+    echo -e "${BOLD}  │         ADNRPi — Install to USB/SSD          │${NC}"
+    echo -e "${BOLD}  └─────────────────────────────────────────────┘${NC}"
+    echo ""
+}
+
+section() {
+    echo -e "  ${CYAN}── $1 $( printf '%.0s─' $(seq 1 $((45 - ${#1}))) )${NC}"
+    echo ""
+}
+
+info()    { echo -e "    ${GREEN}✓${NC} $*"; }
+warn()    { echo -e "    ${YELLOW}⚠${NC}  $*"; }
+err()     { echo -e "    ${RED}✗${NC} $*"; }
+ask()     { local _v="$1" _p="$2" _d="$3" _r
+            read -r -p "    ${_p} [${_d}]: " _r
+            printf -v "$_v" '%s' "${_r:-$_d}"; }
+yesno()   { local _v="$1" _p="$2" _d="${3:-n}" _r _h
+            [[ "$_d" == "y" ]] && _h="Y/n" || _h="y/N"
+            read -r -p "    ${_p} [${_h}]: " _r
+            _r="${_r:-$_d}"
+            [[ "${_r,,}" =~ ^y ]] && printf -v "$_v" '%s' "yes" || printf -v "$_v" '%s' "no"; }
+
+# ── Détection des périphériques cibles ───────────────────────────────────────
+
+list_targets() {
+    # Retourne: /dev/sdX  SIZE  MODEL
+    lsblk -dno NAME,SIZE,MODEL,TYPE 2>/dev/null | while read -r name size model type; do
+        [[ "$type" != "disk" ]]   && continue
+        [[ "$name" == mmcblk* ]]  && continue   # SD card — exclue
+        printf "  /dev/%-6s  %-8s  %s\n" "$name" "$size" "${model:-Inconnu}"
+    done
+}
+
+pick_target() {
+    local targets
+    targets=$(list_targets)
+
+    if [[ -z "$targets" ]]; then
+        err "Aucun périphérique USB/SSD/NVMe détecté."
+        echo ""
+        echo -e "    ${DIM}Branchez votre clé USB / disque dur et relancez la commande.${NC}"
+        echo ""
+        exit 1
+    fi
+
+    section "Périphériques disponibles"
+    echo "$targets"
+    echo ""
+
+    ask TARGET_DEV "Périphérique cible (ex: /dev/sda)" "/dev/sda"
+
+    if [[ ! -b "$TARGET_DEV" ]]; then
+        err "$TARGET_DEV n'est pas un périphérique bloc valide."
+        exit 1
+    fi
+
+    # Sécurité : interdire d'écrire sur la SD
+    if [[ "$TARGET_DEV" == /dev/mmcblk* ]]; then
+        err "Cible refusée : la carte SD est le périphérique source."
+        exit 1
+    fi
+
+    TARGET_SIZE=$(lsblk -dno SIZE "$TARGET_DEV" 2>/dev/null || echo "?")
+    TARGET_MODEL=$(lsblk -dno MODEL "$TARGET_DEV" 2>/dev/null || echo "Inconnu")
+}
+
+# ── Partitionnement & formatage ───────────────────────────────────────────────
+
+prepare_target() {
+    echo ""
+    warn "ATTENTION : ${TARGET_DEV} (${TARGET_SIZE} — ${TARGET_MODEL}) sera entièrement formaté."
+    echo ""
+    yesno CONFIRM_FORMAT "Confirmer le formatage de ${TARGET_DEV}" "n"
+    if [[ "$CONFIRM_FORMAT" != "yes" ]]; then
+        echo ""
+        echo -e "  ${DIM}Annulé.${NC}"
+        echo ""
+        exit 0
+    fi
+
+    echo ""
+    echo -e "  ${YELLOW}Partitionnement de ${TARGET_DEV}…${NC}"
+
+    # Démonte tout ce qui serait monté sur ce disque
+    for part in $(lsblk -lno NAME "$TARGET_DEV" | tail -n +2); do
+        umount "/dev/$part" 2>/dev/null || true
+    done
+
+    # Partition unique ext4 couvrant tout le disque
+    parted -s "$TARGET_DEV" mklabel msdos
+    parted -s "$TARGET_DEV" mkpart primary ext4 1MiB 100%
+    partprobe "$TARGET_DEV" 2>/dev/null; sleep 2
+
+    # Détermine le nom de la partition (sda1 ou sda1, nvme0n1p1, etc.)
+    if [[ "$TARGET_DEV" == *nvme* ]]; then
+        TARGET_PART="${TARGET_DEV}p1"
+    else
+        TARGET_PART="${TARGET_DEV}1"
+    fi
+
+    echo -e "  ${YELLOW}Formatage ext4 sur ${TARGET_PART}…${NC}"
+    mkfs.ext4 -F -L "adnrpi-root" "$TARGET_PART"
+    info "Partition formatée : ${TARGET_PART}"
+}
+
+# ── Copie du rootfs ───────────────────────────────────────────────────────────
+
+copy_rootfs() {
+    local MNT="/mnt/adnrpi-usb"
+    mkdir -p "$MNT"
+    mount "$TARGET_PART" "$MNT"
+
+    echo ""
+    echo -e "  ${YELLOW}Copie du système en cours (peut prendre plusieurs minutes)…${NC}"
+    echo ""
+
+    rsync -axHAWXS --info=progress2 \
+        --exclude=/boot \
+        --exclude=/proc \
+        --exclude=/sys \
+        --exclude=/dev \
+        --exclude=/run \
+        --exclude=/tmp \
+        --exclude=/mnt \
+        --exclude=/media \
+        / "$MNT/"
+
+    # Recrée les points de montage vides
+    for d in boot proc sys dev run tmp mnt media; do
+        mkdir -p "${MNT}/${d}"
+    done
+
+    info "Copie terminée"
+
+    # Récupère l'UUID de la nouvelle partition
+    TARGET_UUID=$(blkid -s UUID -o value "$TARGET_PART")
+    info "UUID : ${TARGET_UUID}"
+
+    umount "$MNT"
+    rmdir "$MNT" 2>/dev/null || true
+}
+
+# ── Mise à jour de armbianEnv.txt ─────────────────────────────────────────────
+
+update_boot() {
+    local ARMBIANENV="/boot/armbianEnv.txt"
+
+    if [[ ! -f "$ARMBIANENV" ]]; then
+        warn "Fichier ${ARMBIANENV} introuvable — mise à jour manuelle nécessaire."
+        echo ""
+        echo -e "    ${DIM}Ajoutez manuellement dans ${ARMBIANENV} :${NC}"
+        echo -e "    ${BOLD}rootdev=UUID=${TARGET_UUID}${NC}"
+        return
+    fi
+
+    # Sauvegarde
+    cp -f "$ARMBIANENV" "${ARMBIANENV}.bak-$(date +%Y%m%d_%H%M%S)"
+
+    if grep -q "^rootdev=" "$ARMBIANENV"; then
+        sed -i "s|^rootdev=.*|rootdev=UUID=${TARGET_UUID}|" "$ARMBIANENV"
+    else
+        echo "rootdev=UUID=${TARGET_UUID}" >> "$ARMBIANENV"
+    fi
+
+    info "armbianEnv.txt mis à jour → rootdev=UUID=${TARGET_UUID}"
+    echo ""
+    echo -e "    ${DIM}Sauvegarde : ${ARMBIANENV}.bak-*${NC}"
+}
+
+# ── Main ──────────────────────────────────────────────────────────────────────
+
+main() {
+    header
+
+    # Mode --auto : périphérique passé en argument
+    if [[ "$1" == "--auto" ]] && [[ -n "$2" ]]; then
+        TARGET_DEV="$2"
+        if [[ ! -b "$TARGET_DEV" ]]; then
+            err "$TARGET_DEV n'est pas un périphérique bloc valide."
+            exit 1
+        fi
+        TARGET_SIZE=$(lsblk -dno SIZE "$TARGET_DEV" 2>/dev/null || echo "?")
+        TARGET_MODEL=$(lsblk -dno MODEL "$TARGET_DEV" 2>/dev/null || echo "Inconnu")
+    else
+        section "Sélection du périphérique cible"
+        echo -e "    ${DIM}Le système sera copié depuis la carte SD vers le périphérique choisi.${NC}"
+        echo -e "    ${DIM}La carte SD conserve uniquement le bootloader (U-Boot).${NC}"
+        echo ""
+        pick_target
+    fi
+
+    prepare_target
+    copy_rootfs
+    update_boot
+
+    echo ""
+    echo -e "  ${BOLD}${GREEN}Migration terminée !${NC}"
+    echo ""
+    echo -e "  ${DIM}Au prochain redémarrage, le système démarrera depuis :${NC}"
+    echo -e "  ${BOLD}  ${TARGET_DEV} (UUID=${TARGET_UUID})${NC}"
+    echo ""
+    echo -e "  ${DIM}La carte SD est toujours nécessaire pour le bootloader (U-Boot).${NC}"
+    echo -e "  ${DIM}Ne la retirez pas.${NC}"
+    echo ""
+
+    yesno DO_REBOOT "Redémarrer maintenant" "y"
+    if [[ "$DO_REBOOT" == "yes" ]]; then
+        echo ""
+        echo -e "  Redémarrage dans 3 secondes…"
+        sleep 3
+        systemctl reboot
+    fi
+}
+
+main "$@"

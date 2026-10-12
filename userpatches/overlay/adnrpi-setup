@@ -3,7 +3,7 @@
 # Runs interactively on first boot (and after OS updates with new options).
 # Can also be called manually at any time: sudo adnrpi-setup
 
-SETUP_VERSION=1
+SETUP_VERSION=2
 SETUP_DIR="/etc/adnrpi"
 SETUP_CONF="${SETUP_DIR}/setup.conf"
 CONFIG_FILE="/boot/adnrpi-config.txt"
@@ -185,6 +185,19 @@ step_wifi() {
     echo ""
 }
 
+step_storage() {
+    section "Stockage système (optionnel)"
+    echo -e "    ${DIM}Par défaut le système démarre depuis la carte SD.${NC}"
+    echo -e "    ${DIM}Vous pouvez le migrer vers une clé USB, un disque dur ou un SSD NVMe${NC}"
+    echo -e "    ${DIM}pour de meilleures performances et une plus grande fiabilité.${NC}"
+    echo -e "    ${DIM}La carte SD reste nécessaire uniquement pour le bootloader.${NC}"
+    echo ""
+    echo -e "    ${DIM}Commande disponible à tout moment : ${BOLD}sudo adnrpi-install-usb${NC}"
+    echo ""
+    yesno MIGRATE_STORAGE "Migrer vers USB/SSD/NVMe après la configuration" "n"
+    echo ""
+}
+
 step_vnc() {
     section "VNC (accès distant)"
     echo -e "    ${DIM}VNC permet de voir et contrôler HackPad depuis un PC (port 5900).${NC}"
@@ -363,8 +376,58 @@ do_apply() {
     echo ""
     echo -e "  ${BOLD}${GREEN}Configuration applied!${NC}"
     echo ""
-    # HackPad démarre automatiquement après reboot (ConditionPathExists=setup.conf)
-    if systemctl is-enabled adnrpi-hackpad.service &>/dev/null; then
+    # Migration USB/SSD lancée avant le reboot si demandée
+    if [[ "$MIGRATE_STORAGE" == "yes" ]]; then
+        if command -v adnrpi-install-usb &>/dev/null; then
+            echo -e "  ${YELLOW}Lancement de la migration vers USB/SSD…${NC}"
+            echo ""
+            adnrpi-install-usb
+            exit 0
+        else
+            echo -e "  ${YELLOW}⚠  adnrpi-install-usb introuvable.${NC}"
+            echo -e "  ${DIM}Installez-le et lancez : sudo adnrpi-install-usb${NC}"
+            echo ""
+        fi
+    fi
+    # Launcher (pentest) : propose le choix HackPad / Scope avant reboot
+    if [[ -f /opt/adnrpi-launcher/run.sh ]]; then
+        section "Application au démarrage"
+        echo -e "    ${DIM}Votre image inclut plusieurs applications.${NC}"
+        echo -e "    ${DIM}Choisissez celle qui démarre automatiquement :${NC}"
+        echo ""
+        echo -e "    1) ${BOLD}HackPad${NC}   — Interface robot, télécommande, pentest"
+        echo -e "    2) ${BOLD}Scope${NC}     — Oscilloscope, multimètre, I2C"
+        echo -e "    3) ${BOLD}Launcher${NC}  — Choix à chaque démarrage (défaut)"
+        echo ""
+        local APP_CHOICE
+        ask APP_CHOICE "Choix (1/2/3)" "3"
+        case "$APP_CHOICE" in
+            1)
+                systemctl enable  adnrpi-hackpad.service  2>/dev/null || true
+                systemctl disable adnrpi-launcher.service 2>/dev/null || true
+                echo -e "    ${GREEN}✓${NC} HackPad au démarrage"
+                ;;
+            2)
+                systemctl disable adnrpi-hackpad.service  2>/dev/null || true
+                systemctl disable adnrpi-launcher.service 2>/dev/null || true
+                # Scope est lancé via son propre service si installé
+                if systemctl list-unit-files adnrpi-scope.service &>/dev/null; then
+                    systemctl enable adnrpi-scope.service 2>/dev/null || true
+                fi
+                echo -e "    ${GREEN}✓${NC} Scope au démarrage"
+                ;;
+            *)
+                systemctl disable adnrpi-hackpad.service  2>/dev/null || true
+                systemctl enable  adnrpi-launcher.service 2>/dev/null || true
+                echo -e "    ${GREEN}✓${NC} Launcher au démarrage (choix à chaque boot)"
+                ;;
+        esac
+        echo ""
+        echo -e "  Reboot dans 5 secondes… (Ctrl+C pour annuler)"
+        sleep 5
+        systemctl reboot
+    # HackPad seul (image standard)
+    elif systemctl is-enabled adnrpi-hackpad.service &>/dev/null; then
         echo -e "  ${BOLD}HackPad démarrera automatiquement après le reboot.${NC}"
         echo ""
         echo -e "  Reboot dans 5 secondes… (Ctrl+C pour annuler)"
@@ -422,6 +485,7 @@ main() {
     step_security
     step_wifi
     step_vnc
+    step_storage
     step_summary
 
     yesno CONFIRM "Apply this configuration" "y"

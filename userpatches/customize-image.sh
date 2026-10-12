@@ -506,6 +506,11 @@ installFirstBootConfig() {
     rm -f /root/.not_logged_in_yet
     chmod -x /etc/profile.d/armbian-check-first-run.sh 2>/dev/null || true
 
+    # Masquer console-setup.service : sur H3 le driver VT n'est pas prêt au moment
+    # où ce service s'exécute → il bloque et retarde ou empêche getty@tty1 de démarrer.
+    # La configuration clavier/police est appliquée par adnrpi-setup via setupcon.
+    systemctl mask console-setup.service 2>/dev/null || true
+
     echo "ADNRPi first-boot configuration system ... [DONE]"
 }
 

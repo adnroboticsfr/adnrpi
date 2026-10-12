@@ -511,6 +511,14 @@ installFirstBootConfig() {
     # La configuration clavier/police est appliquée par adnrpi-setup via setupcon.
     systemctl mask console-setup.service 2>/dev/null || true
 
+    # Désactiver Plymouth : sur H3 il bloque en attendant une transition DRM/KMS
+    # qui n'arrive pas → plymouth-quit.service ne termine jamais.
+    # Les images ADNRPi sont headless/server ou démarrent HackPad directement.
+    systemctl mask plymouth-start.service plymouth-read-write.service \
+                  plymouth-quit.service plymouth-quit-wait.service 2>/dev/null || true
+    # Retirer 'splash' du cmdline si Armbian l'a ajouté
+    sed -i 's/ *splash//' /boot/armbianEnv.txt 2>/dev/null || true
+
     echo "ADNRPi first-boot configuration system ... [DONE]"
 }
 

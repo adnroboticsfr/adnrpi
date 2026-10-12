@@ -3,7 +3,7 @@
 # Launches the setup wizard on every login until configuration is complete.
 # After an OS update, prompts the user to review new options.
 
-SETUP_VERSION=1   # must match adnrpi-setup
+SETUP_VERSION=2   # must match adnrpi-setup
 SETUP_CONF="/etc/adnrpi/setup.conf"
 
 # Only in interactive shells

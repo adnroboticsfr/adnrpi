@@ -1,15 +1,16 @@
 [Unit]
 Description=ADNRPi IR receiver — enable NEC protocol
-After=sys-subsystem-rc.device
-Wants=sys-subsystem-rc.device
+After=systemd-udevd.service
+ConditionPathExists=/sys/class/rc/rc0
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-# Enable NEC decoder on all rc devices found at boot.
-# The H3 IR receiver (GPIOL11, r_ir_rx_pin) registers as /dev/rc0.
-# ir-keytable -p NEC loads both nec and nec-x variants.
-ExecStart=/bin/sh -c 'for rc in /dev/rc*; do ir-keytable -s "$(basename $rc)" -p NEC 2>/dev/null; done'
+TimeoutStartSec=15
+ExecStart=/bin/bash -c '\
+    for rc in /sys/class/rc/rc*; do \
+        [ -d "$rc" ] && timeout 5 ir-keytable -s "$(basename -- "$rc")" -p NEC 2>/dev/null || true; \
+    done'
 
 [Install]
 WantedBy=multi-user.target

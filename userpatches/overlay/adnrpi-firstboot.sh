@@ -601,8 +601,11 @@ SETUPEOF
         log "No configuration applied (no valid config files found)"
     fi
 
-    # Disable the service after first run
-    systemctl disable adnrpi-firstboot.service 2>/dev/null
+    # Créer le marqueur — le service est conditionné par
+    # ConditionPathExists=!/etc/adnrpi/firstboot.done pour éviter une
+    # deuxième exécution sans appeler systemctl depuis l'intérieur du service.
+    mkdir -p /etc/adnrpi
+    touch /etc/adnrpi/firstboot.done
 
     log "========================================"
     log "ADNRPi First Boot Finished"

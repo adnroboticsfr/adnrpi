@@ -3,12 +3,14 @@ Description=ADNRPi First Boot Configuration
 After=local-fs.target
 Before=network-pre.target
 Wants=local-fs.target
+ConditionPathExists=!/etc/adnrpi/firstboot.done
 
 [Service]
 Type=oneshot
 ExecStart=/usr/local/bin/adnrpi-firstboot.sh
 RemainAfterExit=yes
 StandardOutput=journal+console
+TimeoutStartSec=60
 
 [Install]
 WantedBy=multi-user.target

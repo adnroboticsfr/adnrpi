@@ -53,12 +53,15 @@ if [ "${PAD_FOUND}" -eq 1 ]; then
     apply_pad_font
     touch "${PAD_FLAG}"
     echo "adnrpipad: ADNRPi Pad detected — rotated 180°, large font applied"
-else
-    # Explicitly reset rotation so a previous pad session doesn't leave the
-    # console upside-down on a normal monitor.
+elif [ -f "${PAD_FLAG}" ]; then
+    # Pad était présent à un boot précédent — remettre la rotation à 0.
+    # On n'écrit rotate_all que si on sait qu'il y avait une rotation active,
+    # pour ne pas effacer la console sur un écran HDMI normal.
     echo 0 > /sys/class/graphics/fbcon/rotate_all 2>/dev/null || true
     rm -f "${PAD_FLAG}"
-    echo "adnrpipad: no ADNRPi Pad detected — rotation reset to 0°"
+    echo "adnrpipad: Pad retiré — rotation remise à 0°"
+else
+    echo "adnrpipad: aucun ADNRPi Pad détecté"
 fi
 
 exit 0

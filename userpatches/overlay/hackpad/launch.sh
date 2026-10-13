@@ -12,6 +12,11 @@
 SMALL_W=800
 SMALL_H=480
 
+# Masquer le curseur sur tty1 — vt.global_cursor_default=0 le cache déjà au boot
+# mais on s'assure qu'il est bien absent une fois HackPad lancé (au cas où le
+# wizard l'aurait réactivé avec \033[?25h).
+printf '\033[?25l' > /dev/tty1 2>/dev/null || true
+
 # Attendre que les périphériques d'entrée USB soient prêts (jusqu'à 10 s)
 # Le tactile USB peut prendre 3-5 s après Xorg au boot
 for i in $(seq 1 10); do

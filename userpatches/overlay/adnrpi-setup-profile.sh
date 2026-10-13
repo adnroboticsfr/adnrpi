@@ -15,6 +15,9 @@ SETUP_CONF="/etc/adnrpi/setup.conf"
 
 if [[ ! -f "${SETUP_CONF}" ]]; then
     # ── First boot: setup has never run ──────────────────────────────────────
+    # Réactiver le curseur (vt.global_cursor_default=0 le masque sur image pentest)
+    printf '\033[?25h'
+    clear
     echo ""
     echo "  ┌─────────────────────────────────────────────┐"
     echo "  │  Welcome to ADNRPi!                         │"

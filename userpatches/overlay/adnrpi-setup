@@ -199,6 +199,13 @@ step_storage() {
 }
 
 step_vnc() {
+    # VNC uniquement sur les images qui ont adnrpi-vnc.service (pentest/HackPad).
+    # Les images server pures n'ont pas X11 ni x11vnc — ne pas proposer l'option.
+    if [[ ! -f /etc/systemd/system/adnrpi-vnc.service ]]; then
+        NEW_VNC_ENABLED="${CUR_VNC_ENABLED}"
+        NEW_VNC_PASSWORD="${CUR_VNC_PASSWORD}"
+        return
+    fi
     section "VNC (accès distant)"
     echo -e "    ${DIM}VNC permet de voir et contrôler HackPad depuis un PC (port 5900).${NC}"
     echo ""
@@ -232,11 +239,13 @@ step_summary() {
     else
         echo -e "    WiFi         : ${DIM}skipped${NC}"
     fi
-    if [[ "$NEW_VNC_ENABLED" == "yes" ]]; then
-        local vnc_sec="$( [[ -n "$NEW_VNC_PASSWORD" ]] && echo "avec mot de passe" || echo "sans mot de passe" )"
-        echo -e "    VNC          : ${BOLD}activé${NC} — port 5900 (${vnc_sec})"
-    else
-        echo -e "    VNC          : ${DIM}désactivé${NC}"
+    if [[ -f /etc/systemd/system/adnrpi-vnc.service ]]; then
+        if [[ "$NEW_VNC_ENABLED" == "yes" ]]; then
+            local vnc_sec="$( [[ -n "$NEW_VNC_PASSWORD" ]] && echo "avec mot de passe" || echo "sans mot de passe" )"
+            echo -e "    VNC          : ${BOLD}activé${NC} — port 5900 (${vnc_sec})"
+        else
+            echo -e "    VNC          : ${DIM}désactivé${NC}"
+        fi
     fi
     echo ""
 }
@@ -389,8 +398,9 @@ do_apply() {
             echo ""
         fi
     fi
-    # Launcher (pentest) : propose le choix HackPad / Scope avant reboot
-    if [[ -f /opt/adnrpi-launcher/run.sh ]]; then
+    # Launcher (pentest) : propose le choix HackPad / Scope avant reboot.
+    # Conditionné par la présence de HackPad (installé uniquement sur image pentest).
+    if [[ -f /opt/adnrpi-hackpad/main.py ]]; then
         section "Application au démarrage"
         echo -e "    ${DIM}Votre image inclut plusieurs applications.${NC}"
         echo -e "    ${DIM}Choisissez celle qui démarre automatiquement :${NC}"

@@ -1,6 +1,11 @@
 [Unit]
 Description=ADNRPi HackPad — interface Kivy sous Xorg (tty1)
 After=systemd-udevd.service local-fs.target adnrpi-firstboot.service
+# Quand HackPad démarre (setup.conf présent) il prend vt1 — stoppe getty@tty1.
+# Sur premier boot (setup.conf absent) la ConditionPathExists fait échouer le
+# service AVANT tout démarrage, donc Conflicts= n'est jamais déclenché et
+# getty reste disponible pour le wizard.
+Conflicts=getty@tty1.service
 ConditionPathExists=/opt/adnrpi-hackpad/main.py
 ConditionPathExists=/etc/adnrpi/setup.conf
 

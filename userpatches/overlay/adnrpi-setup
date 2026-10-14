@@ -185,8 +185,24 @@ step_wifi() {
     echo ""
 }
 
+step_advanced_gate() {
+    # Gate unique avant les options avancées (VNC, stockage USB).
+    # Si l'utilisateur répond non, ces étapes sont ignorées.
+    section "Configuration avancée"
+    echo -e "    ${DIM}Options avancées : accès distant (VNC), migration vers USB/SSD.${NC}"
+    echo -e "    ${DIM}Ces options peuvent être configurées plus tard avec 'adnrpi-setup'.${NC}"
+    echo ""
+    yesno SHOW_ADVANCED "Accéder à la configuration avancée" "n"
+    echo ""
+}
+
 step_storage() {
-    section "Stockage système (optionnel)"
+    # Ignorée si la gate avancée n'a pas été acceptée.
+    if [[ "$SHOW_ADVANCED" != "yes" ]]; then
+        MIGRATE_STORAGE="no"
+        return
+    fi
+    section "Stockage système"
     echo -e "    ${DIM}Par défaut le système démarre depuis la carte SD.${NC}"
     echo -e "    ${DIM}Vous pouvez le migrer vers une clé USB, un disque dur ou un SSD NVMe${NC}"
     echo -e "    ${DIM}pour de meilleures performances et une plus grande fiabilité.${NC}"
@@ -202,6 +218,12 @@ step_vnc() {
     # VNC uniquement sur les images qui ont adnrpi-vnc.service (pentest/HackPad).
     # Les images server pures n'ont pas X11 ni x11vnc — ne pas proposer l'option.
     if [[ ! -f /etc/systemd/system/adnrpi-vnc.service ]]; then
+        NEW_VNC_ENABLED="${CUR_VNC_ENABLED}"
+        NEW_VNC_PASSWORD="${CUR_VNC_PASSWORD}"
+        return
+    fi
+    # Ignorée si la gate avancée n'a pas été acceptée.
+    if [[ "$SHOW_ADVANCED" != "yes" ]]; then
         NEW_VNC_ENABLED="${CUR_VNC_ENABLED}"
         NEW_VNC_PASSWORD="${CUR_VNC_PASSWORD}"
         return
@@ -494,6 +516,7 @@ main() {
     step_keyboard
     step_security
     step_wifi
+    step_advanced_gate
     step_vnc
     step_storage
     step_summary

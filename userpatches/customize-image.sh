@@ -719,9 +719,18 @@ TOUCHEOF
         fi
     fi
 
-    # ── getty@tty1 override — console seulement avant setup, HackPad après ────────
-    # Avant setup.conf : getty@tty1 tourne (l'utilisateur peut se connecter et lancer adnrpi-setup)
-    # Après setup.conf : hackpad.service prend vt1, getty@tty1 s'arrête (Conflicts=)
+    # ── Wizard premier boot — service dédié sur tty1 ─────────────────────────────
+    # adnrpi-wizard.service prend tty1 directement (StandardInput/Output=tty)
+    # sans passer par getty ni profile.d — plus fiable sur H3 Armbian.
+    cp -v /tmp/overlay/adnrpi-wizard.service /etc/systemd/system/
+    cp -v /tmp/overlay/adnrpi-wizard-launcher.sh /usr/local/bin/
+    chmod 755 /usr/local/bin/adnrpi-wizard-launcher.sh
+    chmod 644 /etc/systemd/system/adnrpi-wizard.service
+    systemctl enable adnrpi-wizard.service
+
+    # ── getty@tty1 override — login shell après setup, hackpad prend le relais ──
+    # Avant setup.conf : adnrpi-wizard.service prend tty1 (Conflicts= dans wizard.service)
+    # Après setup.conf : hackpad.service prend vt1 (Conflicts= dans hackpad.service)
     mkdir -p /etc/systemd/system/getty@tty1.service.d
     cp -v /tmp/overlay/getty@tty1.service.d/hackpad.conf \
           /etc/systemd/system/getty@tty1.service.d/hackpad.conf

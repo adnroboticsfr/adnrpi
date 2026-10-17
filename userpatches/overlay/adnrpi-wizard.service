@@ -15,6 +15,9 @@ TTYPath=/dev/tty1
 TTYReset=yes
 TTYVHangup=yes
 TTYVTDisallocate=no
+# TERM indispensable pour que les couleurs et la mise en page s'affichent
+Environment=TERM=linux
+Environment=HOME=/root
 Restart=on-failure
 RestartSec=3
 

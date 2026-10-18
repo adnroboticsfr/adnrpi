@@ -3,7 +3,11 @@ Description=ADNRPi First Boot Wizard
 ConditionPathExists=!/etc/adnrpi/setup.conf
 After=multi-user.target adnrpi-firstboot.service
 Wants=multi-user.target
-Conflicts=adnrpi-hackpad.service getty@tty1.service
+# Pas de Conflicts= ici — les ConditionPathExists sur wizard ET hackpad
+# sont en miroir (l'un demarre avant setup.conf, l'autre apres) et
+# assurent la mutual-exclusion sans avoir besoin de Conflicts=.
+# Ajouter Conflicts= empeche hackpad de demarrer au second boot meme
+# quand wizard est skippé par sa condition.
 
 [Service]
 Type=simple

@@ -511,12 +511,12 @@ installFirstBootConfig() {
     # La configuration clavier/police est appliquée par adnrpi-setup via setupcon.
     systemctl mask console-setup.service 2>/dev/null || true
 
-    # Désactiver Plymouth : sur H3 il bloque en attendant une transition DRM/KMS
-    # qui n'arrive pas → plymouth-quit.service ne termine jamais.
-    # Les images ADNRPi sont headless/server ou démarrent HackPad directement.
-    systemctl mask plymouth-start.service plymouth-read-write.service \
-                  plymouth-quit.service plymouth-quit-wait.service 2>/dev/null || true
-    # Retirer 'splash' du cmdline si Armbian l'a ajouté
+    # Plymouth : seul plymouth-quit-wait bloque sur H3 (attend DRM/KMS indéfiniment).
+    # On masque uniquement ce service — les autres restent actifs pour voir les
+    # messages de boot en mode console.
+    systemctl mask plymouth-quit-wait.service 2>/dev/null || true
+    # Retirer 'splash' du cmdline si Armbian l'a ajouté (splash active l'écran Plymouth
+    # graphique qui lui aussi peut bloquer sur H3 sans GPU DRM)
     sed -i 's/ *splash//' /boot/armbianEnv.txt 2>/dev/null || true
 
     echo "ADNRPi first-boot configuration system ... [DONE]"
@@ -706,16 +706,18 @@ EndSection
 TOUCHEOF
     chmod 644 /etc/X11/xorg.conf.d/99-adnrpi-touch.conf
 
-    # ── Boot silencieux — pas de messages kernel pendant HackPad ─────────────────
-    # Ajoute quiet loglevel=1 à extraargs dans armbianEnv.txt (si pas déjà présent)
+    # ── Masquer le curseur HW sur tty1 (HackPad plein écran) ─────────────────────
+    # quiet/loglevel=1 retiré pour que les messages de boot restent visibles.
+    # vt.global_cursor_default=0 conservé : le cursor hardware clignote sur
+    # l'interface Kivy et nuit à l'expérience utilisateur.
     if [ -f /boot/armbianEnv.txt ]; then
         if grep -q "^extraargs=" /boot/armbianEnv.txt; then
-            if ! grep -q "quiet" /boot/armbianEnv.txt; then
-                sed -i 's/^extraargs=\(.*\)/extraargs=\1 quiet loglevel=1 vt.global_cursor_default=0/' \
+            if ! grep -q "vt.global_cursor_default" /boot/armbianEnv.txt; then
+                sed -i 's/^extraargs=\(.*\)/extraargs=\1 vt.global_cursor_default=0/' \
                     /boot/armbianEnv.txt
             fi
         else
-            echo "extraargs=quiet loglevel=1 vt.global_cursor_default=0" >> /boot/armbianEnv.txt
+            echo "extraargs=vt.global_cursor_default=0" >> /boot/armbianEnv.txt
         fi
     fi
 

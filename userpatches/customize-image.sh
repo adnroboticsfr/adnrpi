@@ -631,6 +631,24 @@ installHackPad() {
     chmod 644 /etc/systemd/system/adnrpi-hackpad.service
     systemctl enable adnrpi-hackpad.service
 
+    # ── Application Scope ─────────────────────────────────────────────────────────
+    local scopedir="/opt/adnrpi-scope"
+    mkdir -p "${scopedir}"
+    cp -rv /tmp/overlay/scope/* "${scopedir}/"
+    chmod +x "${scopedir}/launch.sh"
+    cp -v /tmp/overlay/adnrpi-scope.service /etc/systemd/system/
+    chmod 644 /etc/systemd/system/adnrpi-scope.service
+    # Pas activé ici — activé par adnrpi-setup au choix de l'utilisateur
+
+    # ── Application Launcher ──────────────────────────────────────────────────────
+    local launcherdir="/opt/adnrpi-launcher"
+    mkdir -p "${launcherdir}"
+    cp -rv /tmp/overlay/launcher/* "${launcherdir}/"
+    chmod +x "${launcherdir}/run.sh"
+    cp -v /tmp/overlay/adnrpi-launcher.service /etc/systemd/system/
+    chmod 644 /etc/systemd/system/adnrpi-launcher.service
+    # Pas activé ici — activé par adnrpi-setup au choix de l'utilisateur
+
     # ── Config par défaut (pré-remplie dans les outils) ──────────────────────────
     mkdir -p /etc/adnrpi-hackpad
     cat > /etc/adnrpi-hackpad/settings.conf <<'CONF'

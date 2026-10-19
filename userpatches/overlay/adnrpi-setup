@@ -437,11 +437,13 @@ do_apply() {
             2)
                 # Scope — activer son service s'il existe, sinon fallback HackPad
                 if systemctl list-unit-files adnrpi-scope.service 2>/dev/null | grep -q adnrpi-scope; then
-                    systemctl disable adnrpi-hackpad.service  2>/dev/null || true
-                    systemctl enable  adnrpi-scope.service    2>/dev/null || true
+                    systemctl disable adnrpi-hackpad.service   2>/dev/null || true
+                    systemctl disable adnrpi-launcher.service  2>/dev/null || true
+                    systemctl enable  adnrpi-scope.service     2>/dev/null || true
                     echo -e "    ${GREEN}✓${NC} Scope au démarrage"
                 else
-                    systemctl enable adnrpi-hackpad.service 2>/dev/null || true
+                    systemctl disable adnrpi-launcher.service  2>/dev/null || true
+                    systemctl enable  adnrpi-hackpad.service   2>/dev/null || true
                     echo -e "    ${YELLOW}⚠${NC}  Scope non disponible sur cette image — HackPad activé"
                 fi
                 ;;
@@ -449,16 +451,20 @@ do_apply() {
                 # Launcher — activer son service s'il existe, sinon fallback HackPad
                 if systemctl list-unit-files adnrpi-launcher.service 2>/dev/null | grep -q adnrpi-launcher; then
                     systemctl disable adnrpi-hackpad.service   2>/dev/null || true
+                    systemctl disable adnrpi-scope.service     2>/dev/null || true
                     systemctl enable  adnrpi-launcher.service  2>/dev/null || true
                     echo -e "    ${GREEN}✓${NC} Launcher au démarrage"
                 else
-                    systemctl enable adnrpi-hackpad.service 2>/dev/null || true
+                    systemctl disable adnrpi-scope.service     2>/dev/null || true
+                    systemctl enable  adnrpi-hackpad.service   2>/dev/null || true
                     echo -e "    ${YELLOW}⚠${NC}  Launcher non disponible sur cette image — HackPad activé"
                 fi
                 ;;
             *)
                 # HackPad (défaut)
-                systemctl enable adnrpi-hackpad.service 2>/dev/null || true
+                systemctl disable adnrpi-scope.service     2>/dev/null || true
+                systemctl disable adnrpi-launcher.service  2>/dev/null || true
+                systemctl enable  adnrpi-hackpad.service   2>/dev/null || true
                 echo -e "    ${GREEN}✓${NC} HackPad au démarrage"
                 ;;
         esac

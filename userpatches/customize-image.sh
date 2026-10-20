@@ -592,6 +592,14 @@ installHackPad() {
         libsdl2-2.0-0 libsdl2-image-2.0-0 libsdl2-mixer-2.0-0 libsdl2-ttf-2.0-0 \
         libgles2 libgbm1 libegl-mesa0 libdrm2 libmtdev1
 
+    # ── Dépendances Scope ─────────────────────────────────────────────────────────
+    # numpy : import global dans scope_screen.py et audio_capture.py — obligatoire
+    # python3-serial : liaison STM32/Pico via /dev/ttyACM0
+    # sounddevice + smbus2 : imports lazy (pas de crash si absent, mais fonctions désactivées)
+    apt-get install -y --no-install-recommends python3-numpy python3-serial
+    pip3 install --break-system-packages sounddevice smbus2 2>/dev/null || \
+        pip3 install sounddevice smbus2 2>/dev/null || true
+
     # ── Xorg (backend SDL2 fonctionnel sur Bookworm ARM via modesetting + Lima) ──
     apt-get install -y --no-install-recommends \
         xserver-xorg-core xserver-xorg-video-fbdev \

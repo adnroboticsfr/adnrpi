@@ -1,6 +1,9 @@
 [Unit]
 Description=Rotate tty console 180 degrees when ADNRPi Pad screen is detected
 After=systemd-udevd.service
+# Ne pas tourner pendant le wizard premier boot — setfont + rotate_all perturbent
+# la console interactive. S'exécute à partir du 2ème boot (setup.conf présent).
+ConditionPathExists=/etc/adnrpi/setup.conf
 
 [Service]
 Type=simple

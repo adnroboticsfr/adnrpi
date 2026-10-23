@@ -1,7 +1,7 @@
 [Unit]
 Description=ADNRPi First Boot Wizard
 ConditionPathExists=!/etc/adnrpi/setup.conf
-After=multi-user.target adnrpi-firstboot.service
+After=multi-user.target adnrpi-firstboot.service adnrpipad-console-rotate.service
 Wants=multi-user.target
 # Pas de Conflicts= ici — les ConditionPathExists sur wizard ET hackpad
 # sont en miroir (l'un demarre avant setup.conf, l'autre apres) et

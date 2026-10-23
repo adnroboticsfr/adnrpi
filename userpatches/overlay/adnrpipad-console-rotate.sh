@@ -11,7 +11,7 @@
 #
 # Retries for a while because the USB touchscreen settles asynchronously.
 
-TRIES=20
+TRIES=10
 PAD_FLAG="/run/adnrpi-pad-detected"
 
 # ── Font helper ───────────────────────────────────────────────────────────────

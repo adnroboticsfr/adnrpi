@@ -8,6 +8,14 @@ SETUP_DIR="/etc/adnrpi"
 SETUP_CONF="${SETUP_DIR}/setup.conf"
 CONFIG_FILE="/boot/adnrpi-config.txt"
 
+# ── Terminal size lock ───────────────────────────────────────────────────────
+# systemd-vconsole-setup peut se re-déclencher via udev (écran tactile USB)
+# et remettre une police qui change la taille réelle du terminal. Le kernel
+# envoie alors SIGWINCH, ce qui réduit l'affichage du wizard.
+# On l'intercepte pour ré-imposer 80×24 immédiatement.
+_lock_tty() { stty cols 80 rows 24 2>/dev/null || true; }
+trap '_lock_tty' WINCH
+
 # ── Terminal colours ─────────────────────────────────────────────────────────
 if [[ -t 1 ]]; then
     BOLD='\033[1m'; DIM='\033[2m'; NC='\033[0m'
@@ -19,6 +27,7 @@ fi
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 header() {
+    _lock_tty
     clear
     echo ""
     echo -e "${BOLD}  ┌─────────────────────────────────────────────┐${NC}"

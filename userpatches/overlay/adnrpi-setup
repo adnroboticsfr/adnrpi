@@ -213,13 +213,13 @@ step_wifi() {
 }
 
 step_advanced_gate() {
-    # Gate unique avant les options avancées (VNC, stockage USB).
-    # Si l'utilisateur répond non, ces étapes sont ignorées.
-    section "Configuration avancée"
-    echo -e "    ${DIM}Options avancées : accès distant (VNC), migration vers USB/SSD.${NC}"
-    echo -e "    ${DIM}Ces options peuvent être configurées plus tard avec 'adnrpi-setup'.${NC}"
+    # Gate before advanced options (VNC, USB storage).
+    # If the user answers no, those steps are skipped.
+    section "Advanced options"
+    echo -e "    ${DIM}Remote access (VNC), migration to USB/SSD.${NC}"
+    echo -e "    ${DIM}These options can be configured later with 'adnrpi-setup'.${NC}"
     echo ""
-    yesno SHOW_ADVANCED "Accéder à la configuration avancée" "n"
+    yesno SHOW_ADVANCED "Configure advanced options" "n"
     echo ""
 }
 
@@ -229,15 +229,15 @@ step_storage() {
         MIGRATE_STORAGE="no"
         return
     fi
-    section "Stockage système"
-    echo -e "    ${DIM}Par défaut le système démarre depuis la carte SD.${NC}"
-    echo -e "    ${DIM}Vous pouvez le migrer vers une clé USB, un disque dur ou un SSD NVMe${NC}"
-    echo -e "    ${DIM}pour de meilleures performances et une plus grande fiabilité.${NC}"
-    echo -e "    ${DIM}La carte SD reste nécessaire uniquement pour le bootloader.${NC}"
+    section "Storage"
+    echo -e "    ${DIM}By default the system boots from the SD card.${NC}"
+    echo -e "    ${DIM}You can migrate it to a USB drive, hard disk or NVMe SSD${NC}"
+    echo -e "    ${DIM}for better performance and reliability.${NC}"
+    echo -e "    ${DIM}The SD card is only needed for the bootloader.${NC}"
     echo ""
-    echo -e "    ${DIM}Commande disponible à tout moment : ${BOLD}sudo adnrpi-install-usb${NC}"
+    echo -e "    ${DIM}Available at any time: ${BOLD}sudo adnrpi-install-usb${NC}"
     echo ""
-    yesno MIGRATE_STORAGE "Migrer vers USB/SSD/NVMe après la configuration" "n"
+    yesno MIGRATE_STORAGE "Migrate to USB/SSD/NVMe after setup" "n"
     echo ""
 }
 
@@ -255,13 +255,13 @@ step_vnc() {
         NEW_VNC_PASSWORD="${CUR_VNC_PASSWORD}"
         return
     fi
-    section "VNC (accès distant)"
-    echo -e "    ${DIM}VNC permet de voir et contrôler HackPad depuis un PC (port 5900).${NC}"
+    section "VNC (remote access)"
+    echo -e "    ${DIM}VNC lets you view and control HackPad from a PC (port 5900).${NC}"
     echo ""
-    yesno NEW_VNC_ENABLED "Activer VNC" "$( [[ "$CUR_VNC_ENABLED" == "yes" ]] && echo y || echo n )"
+    yesno NEW_VNC_ENABLED "Enable VNC" "$( [[ "$CUR_VNC_ENABLED" == "yes" ]] && echo y || echo n )"
     if [[ "$NEW_VNC_ENABLED" == "yes" ]]; then
-        echo -e "    ${DIM}Mot de passe VNC (8 caractères max, laisser vide = sans mot de passe).${NC}"
-        ask_password NEW_VNC_PASSWORD "Mot de passe VNC" "${CUR_VNC_PASSWORD}"
+        echo -e "    ${DIM}VNC password (max 8 chars, leave empty = no password).${NC}"
+        ask_password NEW_VNC_PASSWORD "VNC password" "${CUR_VNC_PASSWORD}"
         [[ -z "$NEW_VNC_PASSWORD" ]] && NEW_VNC_PASSWORD="${CUR_VNC_PASSWORD}"
     else
         NEW_VNC_PASSWORD="${CUR_VNC_PASSWORD}"
@@ -290,10 +290,10 @@ step_summary() {
     fi
     if [[ -f /etc/systemd/system/adnrpi-vnc.service ]]; then
         if [[ "$NEW_VNC_ENABLED" == "yes" ]]; then
-            local vnc_sec="$( [[ -n "$NEW_VNC_PASSWORD" ]] && echo "avec mot de passe" || echo "sans mot de passe" )"
-            echo -e "    VNC          : ${BOLD}activé${NC} — port 5900 (${vnc_sec})"
+            local vnc_sec="$( [[ -n "$NEW_VNC_PASSWORD" ]] && echo "password set" || echo "no password" )"
+            echo -e "    VNC          : ${BOLD}enabled${NC} — port 5900 (${vnc_sec})"
         else
-            echo -e "    VNC          : ${DIM}désactivé${NC}"
+            echo -e "    VNC          : ${DIM}disabled${NC}"
         fi
     fi
     echo ""
@@ -437,29 +437,29 @@ do_apply() {
     # Migration USB/SSD lancée avant le reboot si demandée
     if [[ "$MIGRATE_STORAGE" == "yes" ]]; then
         if command -v adnrpi-install-usb &>/dev/null; then
-            echo -e "  ${YELLOW}Lancement de la migration vers USB/SSD…${NC}"
+            echo -e "  ${YELLOW}Starting migration to USB/SSD…${NC}"
             echo ""
             adnrpi-install-usb
             exit 0
         else
-            echo -e "  ${YELLOW}⚠  adnrpi-install-usb introuvable.${NC}"
-            echo -e "  ${DIM}Installez-le et lancez : sudo adnrpi-install-usb${NC}"
+            echo -e "  ${YELLOW}⚠  adnrpi-install-usb not found.${NC}"
+            echo -e "  ${DIM}Install it and run: sudo adnrpi-install-usb${NC}"
             echo ""
         fi
     fi
     # Launcher (pentest) : propose le choix HackPad / Scope avant reboot.
     # Conditionné par la présence de HackPad (installé uniquement sur image pentest).
     if [[ -f /opt/adnrpi-hackpad/main.py ]]; then
-        section "Application au démarrage"
-        echo -e "    ${DIM}Votre image inclut plusieurs applications.${NC}"
-        echo -e "    ${DIM}Choisissez celle qui démarre automatiquement :${NC}"
+        section "Startup application"
+        echo -e "    ${DIM}Your image includes several applications.${NC}"
+        echo -e "    ${DIM}Choose which one starts automatically:${NC}"
         echo ""
-        echo -e "    1) ${BOLD}HackPad${NC}   — Interface robot, télécommande, pentest"
-        echo -e "    2) ${BOLD}Scope${NC}     — Oscilloscope, multimètre, I2C"
-        echo -e "    3) ${BOLD}Launcher${NC}  — Choix à chaque démarrage"
+        echo -e "    1) ${BOLD}HackPad${NC}   — Robot interface, remote control, pentest"
+        echo -e "    2) ${BOLD}Scope${NC}     — Oscilloscope, multimeter, I2C"
+        echo -e "    3) ${BOLD}Launcher${NC}  — Choose at every boot"
         echo ""
         local APP_CHOICE
-        ask APP_CHOICE "Choix (1/2/3)" "1"
+        ask APP_CHOICE "Choice (1/2/3)" "1"
         case "$APP_CHOICE" in
             2)
                 # Scope — activer son service s'il existe, sinon fallback HackPad
@@ -467,11 +467,11 @@ do_apply() {
                     systemctl disable adnrpi-hackpad.service   2>/dev/null || true
                     systemctl disable adnrpi-launcher.service  2>/dev/null || true
                     systemctl enable  adnrpi-scope.service     2>/dev/null || true
-                    echo -e "    ${GREEN}✓${NC} Scope au démarrage"
+                    echo -e "    ${GREEN}✓${NC} Scope will start on boot"
                 else
                     systemctl disable adnrpi-launcher.service  2>/dev/null || true
                     systemctl enable  adnrpi-hackpad.service   2>/dev/null || true
-                    echo -e "    ${YELLOW}⚠${NC}  Scope non disponible sur cette image — HackPad activé"
+                    echo -e "    ${YELLOW}⚠${NC}  Scope not available on this image — HackPad enabled"
                 fi
                 ;;
             3)
@@ -480,11 +480,11 @@ do_apply() {
                     systemctl disable adnrpi-hackpad.service   2>/dev/null || true
                     systemctl disable adnrpi-scope.service     2>/dev/null || true
                     systemctl enable  adnrpi-launcher.service  2>/dev/null || true
-                    echo -e "    ${GREEN}✓${NC} Launcher au démarrage"
+                    echo -e "    ${GREEN}✓${NC} Launcher will start on boot"
                 else
                     systemctl disable adnrpi-scope.service     2>/dev/null || true
                     systemctl enable  adnrpi-hackpad.service   2>/dev/null || true
-                    echo -e "    ${YELLOW}⚠${NC}  Launcher non disponible sur cette image — HackPad activé"
+                    echo -e "    ${YELLOW}⚠${NC}  Launcher not available on this image — HackPad enabled"
                 fi
                 ;;
             *)
@@ -492,18 +492,18 @@ do_apply() {
                 systemctl disable adnrpi-scope.service     2>/dev/null || true
                 systemctl disable adnrpi-launcher.service  2>/dev/null || true
                 systemctl enable  adnrpi-hackpad.service   2>/dev/null || true
-                echo -e "    ${GREEN}✓${NC} HackPad au démarrage"
+                echo -e "    ${GREEN}✓${NC} HackPad will start on boot"
                 ;;
         esac
         echo ""
-        echo -e "  Reboot dans 5 secondes… (Ctrl+C pour annuler)"
+        echo -e "  Rebooting in 5 seconds… (Ctrl+C to cancel)"
         sleep 5
         systemctl reboot 2>/dev/null || /sbin/reboot
     # HackPad seul (image standard)
     elif systemctl is-enabled adnrpi-hackpad.service &>/dev/null; then
-        echo -e "  ${BOLD}HackPad démarrera automatiquement après le reboot.${NC}"
+        echo -e "  ${BOLD}HackPad will start automatically after reboot.${NC}"
         echo ""
-        echo -e "  Reboot dans 5 secondes… (Ctrl+C pour annuler)"
+        echo -e "  Rebooting in 5 seconds… (Ctrl+C to cancel)"
         sleep 5
         systemctl reboot 2>/dev/null || /sbin/reboot
     else

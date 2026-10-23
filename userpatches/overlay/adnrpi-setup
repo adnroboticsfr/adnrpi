@@ -10,10 +10,28 @@ CONFIG_FILE="/boot/adnrpi-config.txt"
 
 # ── Terminal size lock ───────────────────────────────────────────────────────
 # systemd-vconsole-setup peut se re-déclencher via udev (écran tactile USB)
-# et remettre une police qui change la taille réelle du terminal. Le kernel
-# envoie alors SIGWINCH, ce qui réduit l'affichage du wizard.
-# On l'intercepte pour ré-imposer 80×24 immédiatement.
-_lock_tty() { stty cols 80 rows 24 2>/dev/null || true; }
+# et remettre une police par défaut petite + envoyer SIGWINCH.
+# On ré-applique la grande police Terminus (si pad détecté) ET on ré-impose
+# 80×24 pour que bash ne recalcule pas sa mise en page.
+# Le flag _LOCKING évite la récursion : notre propre setfont envoie aussi SIGWINCH.
+_LOCKING=0
+_lock_tty() {
+    [ "$_LOCKING" -eq 1 ] && return 0
+    _LOCKING=1
+    if [ -f /run/adnrpi-pad-detected ]; then
+        for _f in \
+            /usr/share/consolefonts/Uni2-Terminus32x16.psf.gz \
+            /usr/share/consolefonts/Uni2-Terminus28x14.psf.gz \
+            /usr/share/consolefonts/Uni2-Terminus24x12.psf.gz \
+            /usr/share/consolefonts/Uni2-Terminus22x11.psf.gz \
+            /usr/share/consolefonts/Uni2-Fixed18.psf.gz; do
+            [ -f "$_f" ] || continue
+            setfont "$_f" -C /dev/tty1 2>/dev/null && break
+        done
+    fi
+    stty cols 80 rows 24 2>/dev/null || true
+    _LOCKING=0
+}
 trap '_lock_tty' WINCH
 
 # ── Terminal colours ─────────────────────────────────────────────────────────

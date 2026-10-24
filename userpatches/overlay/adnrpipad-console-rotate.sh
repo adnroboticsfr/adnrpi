@@ -24,10 +24,16 @@ apply_pad_font() {
         /usr/share/consolefonts/Uni2-Terminus22x11.psf.gz \
         /usr/share/consolefonts/Uni2-Fixed18.psf.gz; do
         [ -f "${font}" ] || continue
+        fname="$(basename "${font}" .psf.gz)"
         for n in 1 2 3 4 5 6; do
             setfont "${font}" -C "/dev/tty${n}" 2>/dev/null || true
         done
-        echo "adnrpipad: font $(basename "${font}")"
+        # Write font into vconsole.conf so that systemd-vconsole-setup
+        # re-applies OUR large font instead of the default small one when
+        # it re-triggers via udev (USB touchscreen settling at boot).
+        KEYMAP="$(grep '^KEYMAP=' /etc/vconsole.conf 2>/dev/null | cut -d= -f2)"
+        printf 'FONT=%s\nKEYMAP=%s\n' "${fname}" "${KEYMAP}" > /etc/vconsole.conf
+        echo "adnrpipad: font ${fname} (written to /etc/vconsole.conf)"
         return 0
     done
 }
@@ -54,12 +60,17 @@ if [ "${PAD_FOUND}" -eq 1 ]; then
     touch "${PAD_FLAG}"
     echo "adnrpipad: ADNRPi Pad detected — rotated 180°, large font applied"
 elif [ -f "${PAD_FLAG}" ]; then
-    # Pad était présent à un boot précédent — remettre la rotation à 0.
-    # On n'écrit rotate_all que si on sait qu'il y avait une rotation active,
-    # pour ne pas effacer la console sur un écran HDMI normal.
+    # Pad was present on a previous boot — reset rotation to 0.
     echo 0 > /sys/class/graphics/fbcon/rotate_all 2>/dev/null || true
     rm -f "${PAD_FLAG}"
-    echo "adnrpipad: Pad retiré — rotation remise à 0°"
+    # Restore vconsole.conf to default (remove FONT line so the system default is used)
+    KEYMAP="$(grep '^KEYMAP=' /etc/vconsole.conf 2>/dev/null | cut -d= -f2)"
+    if [ -n "${KEYMAP}" ]; then
+        printf 'KEYMAP=%s\n' "${KEYMAP}" > /etc/vconsole.conf
+    else
+        rm -f /etc/vconsole.conf
+    fi
+    echo "adnrpipad: pad removed — rotation reset to 0°, vconsole.conf restored"
 else
     echo "adnrpipad: aucun ADNRPi Pad détecté"
 fi

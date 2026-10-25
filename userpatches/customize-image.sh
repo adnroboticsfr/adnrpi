@@ -315,18 +315,110 @@ installChromiumFlags() {
 installROS2() {
     local distro="$1"    # humble or jazzy
     local release="$2"   # jammy or noble
-    echo "Installing ROS2 ${distro^} (armhf, Ubuntu ${release}) ..."
+    local arch
+    arch="$(dpkg --print-architecture)"
+    echo "Installing ROS2 ${distro^} (${arch}, Ubuntu ${release}) ..."
     apt-get install -y curl gnupg lsb-release
 
     curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc \
-        | gpg --dearmor -o /usr/share/keyrings/ros-archive-keyring.gpg
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \
+        -o /tmp/ros2.asc
+    gpg --batch --no-tty --dearmor < /tmp/ros2.asc \
+        > /usr/share/keyrings/ros-archive-keyring.gpg
+    echo "deb [arch=${arch} signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \
 http://packages.ros.org/ros2/ubuntu ${release} main" \
         > /etc/apt/sources.list.d/ros2.list
-
     apt-get update
 
-    # ── Packages de base (server + desktop) ──────────────────────────────────
+    # ── armhf: no binary ROS2 packages exist — install build tools + helper ──
+    # ROS2 only publishes amd64/arm64 binaries. On armhf the user must build
+    # from source. We pre-install all build dependencies and drop a script
+    # /usr/local/bin/adnrpi-ros2-build that automates the source build.
+    if [[ "${arch}" == "armhf" ]]; then
+        echo "[armhf] No ROS2 binary packages for armhf — installing build deps + adnrpi-ros2-build script"
+        apt-get install -y \
+            python3-colcon-common-extensions \
+            python3-rosdep \
+            python3-argcomplete \
+            python3-pip \
+            cmake \
+            build-essential \
+            git \
+            wget \
+            libbullet-dev \
+            python3-flake8 \
+            python3-pytest-cov \
+            python3-setuptools \
+            libpython3-dev || true
+
+        cat > /usr/local/bin/adnrpi-ros2-build << BUILDSCRIPT
+#!/bin/bash
+# adnrpi-ros2-build — build ROS2 ${distro^} from source on armhf
+# Run once after first boot: sudo adnrpi-ros2-build
+# This takes 6-10 hours on the SmartPi H3.
+set -e
+DISTRO="${distro}"
+INSTALL_DIR="/opt/ros/\${DISTRO}"
+SRC_DIR="/opt/ros2_src"
+
+echo "=== ROS2 \${DISTRO^} source build for armhf ==="
+echo "    This will take 6-10 hours. Run in a screen session:"
+echo "    screen -S ros2build"
+echo ""
+read -r -p "Continue? [y/N] " yn
+[[ "\${yn,,}" =~ ^y ]] || exit 0
+
+apt-get update
+apt-get install -y python3-rosdep python3-colcon-common-extensions \
+    python3-vcstool cmake build-essential git wget \
+    libbullet-dev libpython3-dev python3-pip
+
+rosdep init 2>/dev/null || true
+rosdep update
+
+mkdir -p "\${SRC_DIR}/src"
+cd "\${SRC_DIR}"
+wget -q "https://raw.githubusercontent.com/ros2/ros2/\${DISTRO}/ros2.repos"
+vcs import src < ros2.repos
+
+rosdep install --from-paths src --ignore-src -y \
+    --skip-keys "fastcdr rti-connext-dds-6.0.1 urdfdom_headers" || true
+
+mkdir -p "\${INSTALL_DIR}"
+colcon build \
+    --symlink-install \
+    --install-base "\${INSTALL_DIR}" \
+    --cmake-args -DCMAKE_BUILD_TYPE=Release \
+    --packages-skip-regex '.*rviz.*' '.*rqt.*' '.*gui.*' \
+    2>&1 | tee /var/log/ros2-build.log
+
+echo "source \${INSTALL_DIR}/setup.bash" >> /root/.bashrc
+grep -q "source \${INSTALL_DIR}/setup.bash" /etc/skel/.bashrc || \
+    echo "source \${INSTALL_DIR}/setup.bash" >> /etc/skel/.bashrc
+
+echo "=== ROS2 \${DISTRO^} build complete ==="
+echo "    Log: /var/log/ros2-build.log"
+echo "    Re-login or: source \${INSTALL_DIR}/setup.bash"
+BUILDSCRIPT
+        chmod 755 /usr/local/bin/adnrpi-ros2-build
+
+        # MOTD notice
+        cat > /etc/update-motd.d/50-ros2-build-notice << 'MOTD'
+#!/bin/sh
+if [ ! -f /opt/ros/*/setup.bash ]; then
+    echo ""
+    echo "  ROS2 not yet installed — binary packages unavailable for armhf."
+    echo "  To build from source (~6-10h): sudo adnrpi-ros2-build"
+    echo ""
+fi
+MOTD
+        chmod 755 /etc/update-motd.d/50-ros2-build-notice
+
+        echo "[armhf] Build script installed at /usr/local/bin/adnrpi-ros2-build"
+        echo "Installing ROS2 ${distro^} (armhf — source build required) ... [DONE]"
+        return
+    fi
+
+    # ── amd64 / arm64 : binary install ───────────────────────────────────────
     apt-get install -y \
         "ros-${distro}-ros-base" \
         python3-colcon-common-extensions \
@@ -353,8 +445,7 @@ http://packages.ros.org/ros2/ubuntu ${release} main" \
         "ros-${distro}-joint-state-publisher" \
         "ros-${distro}-xacro" || true
 
-    # ── Packages desktop — outils de visualisation et navigation ─────────────
-    # Activés si ADNRPI_ROS_DESKTOP=yes dans le conf (marqueur .adnrpi-ros-desktop)
+    # ── Desktop tools ─────────────────────────────────────────────────────────
     if [[ "${ADNRPI_ROS_DESKTOP}" == "yes" ]] || [[ -f /tmp/overlay/.adnrpi-ros-desktop ]]; then
         echo "Installing ROS2 desktop tools ..."
         apt-get install -y \
@@ -387,17 +478,14 @@ http://packages.ros.org/ros2/ubuntu ${release} main" \
     chmod 755 /usr/local/bin/adnrpi-ros-config
     mkdir -p /etc/ros
 
-    # Source ROS2 automatiquement pour tous les utilisateurs
     echo "source /opt/ros/${distro}/setup.bash" >> /etc/skel/.bashrc
-    # Aussi pour root (déjà connecté en chroot)
     grep -q "source /opt/ros/${distro}/setup.bash" /root/.bashrc || \
         echo "source /opt/ros/${distro}/setup.bash" >> /root/.bashrc
 
-    # Vérification rapide de l'installation
     echo "--- ROS2 install check ---"
-    /opt/ros/${distro}/bin/ros2 --version 2>/dev/null || echo "[WARN] ros2 binary not found in /opt/ros/${distro}/bin"
+    /opt/ros/${distro}/bin/ros2 --version 2>/dev/null || \
+        echo "[WARN] ros2 binary not found in /opt/ros/${distro}/bin"
     echo "--------------------------"
-
     echo "Installing ROS2 ${distro^} ... [DONE]"
 }
 

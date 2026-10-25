@@ -62,6 +62,9 @@ Main() {
             # ADNRPI_PENTEST n'est pas transmis au chroot par Armbian (seuls
             # RELEASE/LINUXFAMILY/BOARD/BUILD_DESKTOP sont passés en args).
             # action.yml crée /tmp/overlay/.adnrpi-pentest avant le build.
+            if [[ "${ADNRPI_DOCKER}" == "yes" ]] || [[ -f /tmp/overlay/.adnrpi-docker ]]; then
+                installDockerPortainer
+            fi
             if [[ "${ADNRPI_PENTEST}" == "yes" ]] || [[ -f /tmp/overlay/.adnrpi-pentest ]]; then
                 installPentestTools
                 installHackPad
@@ -544,6 +547,59 @@ installROS1Noetic() {
     echo "source /opt/ros/noetic/setup.bash" >> /etc/skel/.bashrc
 
     echo "Installing ROS1 Noetic ... [DONE]"
+}
+
+installDockerPortainer() {
+    echo "Installing Docker + Portainer ..."
+
+    apt-get install -y docker.io docker-compose
+
+    systemctl enable docker
+
+    # Portainer starts automatically via a systemd service
+    # (docker may not be ready at image build time, so we use a oneshot unit)
+    cat > /etc/systemd/system/adnrpi-portainer.service << 'EOF'
+[Unit]
+Description=Portainer Docker UI
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=-/usr/bin/docker volume create portainer_data
+ExecStart=/usr/bin/docker run -d \
+    --name portainer \
+    --restart=always \
+    -p 9000:9000 \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v portainer_data:/data \
+    portainer/portainer-ce:latest
+ExecStop=/usr/bin/docker stop portainer
+ExecStopPost=/usr/bin/docker rm portainer
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    chmod 644 /etc/systemd/system/adnrpi-portainer.service
+    systemctl enable adnrpi-portainer.service
+
+    # Disable systemd-resolved so port 53 stays free for AdGuard if needed
+    systemctl disable systemd-resolved 2>/dev/null || true
+
+    # MOTD
+    cat > /etc/update-motd.d/50-docker-portainer << 'MOTD'
+#!/bin/sh
+echo ""
+echo "  Docker  : docker ps"
+echo "  Portainer: http://$(hostname -I | awk '{print $1}'):9000"
+echo ""
+MOTD
+    chmod 755 /etc/update-motd.d/50-docker-portainer
+
+    echo "Installing Docker + Portainer ... [DONE]"
+    echo "  → Portainer available at http://<IP>:9000 after first boot"
 }
 
 installFirstBootConfig() {

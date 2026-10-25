@@ -117,6 +117,10 @@ runs:
           echo "[marker] ADNRPI_ROS_DESKTOP=yes → .adnrpi-ros-desktop"
           touch ./build/userpatches/overlay/.adnrpi-ros-desktop
         fi
+        if [[ "${ADNRPI_DOCKER}" == "yes" ]]; then
+          echo "[marker] ADNRPI_DOCKER=yes → .adnrpi-docker"
+          touch ./build/userpatches/overlay/.adnrpi-docker
+        fi
 
     - name: Export ROS1 Noetic from Docker (arm32v7)
       shell: bash

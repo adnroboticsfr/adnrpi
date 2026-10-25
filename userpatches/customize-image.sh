@@ -95,6 +95,18 @@ installADNRPiPadDetection() {
     cp -v /tmp/overlay/adnrpi-pad-font.sh /etc/profile.d/adnrpi-pad-font.sh
     chmod 644 /etc/profile.d/adnrpi-pad-font.sh
 
+    # Drop-in: re-apply large font AFTER every systemd-vconsole-setup run.
+    # This ensures our large font survives no matter how many times
+    # vconsole-setup re-triggers (udev, keyboard hotplug, setupcon, etc.).
+    cp -v /tmp/overlay/adnrpipad-apply-font.sh /usr/local/bin/adnrpipad-apply-font.sh
+    chmod 755 /usr/local/bin/adnrpipad-apply-font.sh
+    mkdir -p /etc/systemd/system/systemd-vconsole-setup.service.d
+    cat > /etc/systemd/system/systemd-vconsole-setup.service.d/adnrpi-font.conf << 'EOF'
+[Service]
+ExecStartPost=-/usr/local/bin/adnrpipad-apply-font.sh
+EOF
+    chmod 644 /etc/systemd/system/systemd-vconsole-setup.service.d/adnrpi-font.conf
+
     # Manual display-mode switcher (pad ↔ hdmi) — edits armbianEnv.txt + reboots
     cp -v /tmp/overlay/adnrpi-display-mode /usr/local/bin/adnrpi-display-mode
     chmod 755 /usr/local/bin/adnrpi-display-mode

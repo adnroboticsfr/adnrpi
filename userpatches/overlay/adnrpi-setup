@@ -49,7 +49,7 @@ header() {
     clear
     echo ""
     echo -e "${BOLD}  ┌─────────────────────────────────────────────┐${NC}"
-    echo -e "${BOLD}  │            ADNRPi Setup Wizard               │${NC}"
+    echo -e "${BOLD}  │             ADNRPi Setup Wizard             │${NC}"
     echo -e "${BOLD}  └─────────────────────────────────────────────┘${NC}"
     echo ""
 }

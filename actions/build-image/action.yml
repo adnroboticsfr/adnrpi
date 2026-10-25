@@ -118,6 +118,32 @@ runs:
           touch ./build/userpatches/overlay/.adnrpi-ros-desktop
         fi
 
+    - name: Export ROS1 Noetic from Docker (arm32v7)
+      shell: bash
+      run: |
+        source ./build/userpatches/config-settings.conf 2>/dev/null || true
+        if [[ "${ADNRPI_ROS}" != "ros1" ]]; then
+          echo "ADNRPI_ROS=${ADNRPI_ROS} — skipping ROS1 Docker export"
+          exit 0
+        fi
+        echo "Pulling ros:noetic-ros-base (linux/arm/v7)..."
+        docker pull --platform linux/arm/v7 ros:noetic-ros-base
+        docker create --platform linux/arm/v7 --name ros1_export ros:noetic-ros-base
+        echo "Exporting filesystem..."
+        mkdir -p /tmp/ros1export
+        docker export ros1_export | tar -x -C /tmp/ros1export
+        docker rm ros1_export
+        # Pack /opt/ros/noetic + libboost1.71 + libpython3.8 needed by ROS1
+        mkdir -p /tmp/ros1pack/noetic /tmp/ros1pack/libs
+        cp -a /tmp/ros1export/opt/ros/noetic/. /tmp/ros1pack/noetic/
+        find /tmp/ros1export/usr/lib/arm-linux-gnueabihf/ \
+            \( -name 'libboost*.so*' -o -name 'libpython3.8*.so*' \) \
+            -exec cp -P {} /tmp/ros1pack/libs/ \; 2>/dev/null || true
+        tar -czf ./build/userpatches/overlay/ros1-noetic.tar.gz -C /tmp ros1pack
+        echo "ROS1 pack size : $(du -sh /tmp/ros1pack | cut -f1)"
+        echo "Overlay tar    : $(du -sh ./build/userpatches/overlay/ros1-noetic.tar.gz | cut -f1)"
+        rm -rf /tmp/ros1export /tmp/ros1pack
+
     - name: sed VERSION
       shell: bash
       run: |
